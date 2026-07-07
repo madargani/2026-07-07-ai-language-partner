@@ -91,49 +91,49 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SETUP-01 | TBD | Pending |
-| SETUP-02 | TBD | Pending |
-| SETUP-03 | TBD | Pending |
-| SETUP-04 | TBD | Pending |
-| CONV-01 | TBD | Pending |
-| CONV-02 | TBD | Pending |
-| CONV-03 | TBD | Pending |
-| CONV-04 | TBD | Pending |
-| CONV-05 | TBD | Pending |
-| CONV-06 | TBD | Pending |
-| CONV-07 | TBD | Pending |
-| CONV-08 | TBD | Pending |
-| FSRS-01 | TBD | Pending |
-| FSRS-02 | TBD | Pending |
-| FSRS-03 | TBD | Pending |
-| FSRS-04 | TBD | Pending |
-| FSRS-05 | TBD | Pending |
-| EXTR-01 | TBD | Pending |
-| EXTR-02 | TBD | Pending |
-| EXTR-03 | TBD | Pending |
-| EXTR-04 | TBD | Pending |
-| EXTR-05 | TBD | Pending |
-| EXTR-06 | TBD | Pending |
-| REVW-01 | TBD | Pending |
-| REVW-02 | TBD | Pending |
-| REVW-03 | TBD | Pending |
-| REVW-04 | TBD | Pending |
-| REVW-05 | TBD | Pending |
-| SUMM-01 | TBD | Pending |
-| SUMM-02 | TBD | Pending |
-| SUMM-03 | TBD | Pending |
-| SUMM-04 | TBD | Pending |
-| SUMM-05 | TBD | Pending |
-| INFRA-01 | TBD | Pending |
-| INFRA-02 | TBD | Pending |
-| INFRA-03 | TBD | Pending |
-| INFRA-04 | TBD | Pending |
-| INFRA-05 | TBD | Pending |
+| SETUP-01 | Phase 1 | Pending |
+| SETUP-02 | Phase 1 | Pending |
+| SETUP-03 | Phase 1 | Pending |
+| SETUP-04 | Phase 2 | Pending |
+| CONV-01 | Phase 2 | Pending |
+| CONV-02 | Phase 2 | Pending |
+| CONV-03 | Phase 2 | Pending |
+| CONV-04 | Phase 2 | Pending |
+| CONV-05 | Phase 2 | Pending |
+| CONV-06 | Phase 2 | Pending |
+| CONV-07 | Phase 2 | Pending |
+| CONV-08 | Phase 2 | Pending |
+| FSRS-01 | Phase 3 | Pending |
+| FSRS-02 | Phase 3 | Pending |
+| FSRS-03 | Phase 3 | Pending |
+| FSRS-04 | Phase 3 | Pending |
+| FSRS-05 | Phase 3 | Pending |
+| EXTR-01 | Phase 4 | Pending |
+| EXTR-02 | Phase 4 | Pending |
+| EXTR-03 | Phase 4 | Pending |
+| EXTR-04 | Phase 4 | Pending |
+| EXTR-05 | Phase 4 | Pending |
+| EXTR-06 | Phase 4 | Pending |
+| REVW-01 | Phase 4 | Pending |
+| REVW-02 | Phase 4 | Pending |
+| REVW-03 | Phase 4 | Pending |
+| REVW-04 | Phase 4 | Pending |
+| REVW-05 | Phase 4 | Pending |
+| SUMM-01 | Phase 5 | Pending |
+| SUMM-02 | Phase 5 | Pending |
+| SUMM-03 | Phase 5 | Pending |
+| SUMM-04 | Phase 5 | Pending |
+| SUMM-05 | Phase 5 | Pending |
+| INFRA-01 | Phase 1 | Pending |
+| INFRA-02 | Phase 1 | Pending |
+| INFRA-03 | Phase 2 | Pending |
+| INFRA-04 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Pending |
 
 **Coverage:**
-- v1 requirements: 37 total
-- Mapped to phases: 0
-- Unmapped: 37 ⚠️
+- v1 requirements: 38 total
+- Mapped to phases: 38
+- Unmapped: 0 ✅
 
 ---
 *Requirements defined: 2026-07-07*
