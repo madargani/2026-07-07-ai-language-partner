@@ -10,12 +10,38 @@ const { mockPrisma } = vi.hoisted(() => {
       findUnique: ReturnType<typeof vi.fn>;
       upsert: ReturnType<typeof vi.fn>;
     };
+    session: {
+      create: ReturnType<typeof vi.fn>;
+      findUnique: ReturnType<typeof vi.fn>;
+      findMany: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
+      deleteMany: ReturnType<typeof vi.fn>;
+    };
+    message: {
+      create: ReturnType<typeof vi.fn>;
+      createMany: ReturnType<typeof vi.fn>;
+      findMany: ReturnType<typeof vi.fn>;
+      deleteMany: ReturnType<typeof vi.fn>;
+    };
   };
 
   const mock: PrismaMock = {
     user: {
       findUnique: vi.fn().mockResolvedValue(null),
       upsert: vi.fn().mockResolvedValue(null),
+    },
+    session: {
+      create: vi.fn().mockResolvedValue({ id: "session-1", status: "active", discordThreadId: "thread-1" }),
+      findUnique: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([]),
+      update: vi.fn().mockResolvedValue(null),
+      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+    },
+    message: {
+      create: vi.fn().mockResolvedValue(null),
+      createMany: vi.fn().mockResolvedValue({ count: 2 }),
+      findMany: vi.fn().mockResolvedValue([]),
+      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
     $disconnect: vi.fn().mockResolvedValue(undefined),
     $connect: vi.fn().mockResolvedValue(undefined),
@@ -58,6 +84,7 @@ process.env.DISCORD_TOKEN = "test-token";
 process.env.DISCORD_CLIENT_ID = "test-client-id";
 process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
 process.env.REDIS_URL = "redis://localhost:6379";
+process.env.OPENAI_API_KEY = "test-openai-key";
 process.env.NODE_ENV = "test";
 
 // ──────────────────────────────────────────────────
