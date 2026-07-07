@@ -1,34 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockPrisma } from "../setup.js";
 
-vi.mock("../../services/conversation.js", async () => {
-  const actual = await vi.importActual<typeof import("../../services/conversation.js")>(
-    "../../services/conversation.js",
-  );
-  return {
-    ...actual,
-    activeSessions: new Map([
-      [
-        "thread-1",
-        {
-          id: "session-1",
-          thread: {
-            id: "thread-1",
-            setArchived: vi.fn().mockResolvedValue(undefined),
-          },
-          userId: "test-user",
-          summary: "",
-          messageCount: 5,
-          correctionCount: 2,
-        },
-      ],
-    ]),
-  };
-});
+const mockThread = {
+  id: "thread-1",
+  setArchived: vi.fn().mockResolvedValue(undefined),
+};
+
+async function setupActiveSession() {
+  const { activeSessions } = await import("../../services/conversation.js");
+  activeSessions.clear();
+  activeSessions.set("thread-1", {
+    id: "session-1",
+    thread: mockThread as any,
+    userId: "test-user",
+    summary: "",
+    messageCount: 5,
+    correctionCount: 2,
+  });
+}
 
 describe("/end command", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    vi.resetModules();
   });
 
   it("ends active session", async () => {
@@ -37,6 +31,8 @@ describe("/end command", () => {
       status: "ended",
       endedAt: new Date(),
     });
+
+    await setupActiveSession();
 
     const { commands } = await import("../../commands/index.js");
     const endCommand = commands.find((c) => {
@@ -92,6 +88,8 @@ describe("/end command", () => {
       status: "ended",
     });
 
+    await setupActiveSession();
+
     const { commands } = await import("../../commands/index.js");
     const endCommand = commands.find((c) => {
       const json = c.data.toJSON();
@@ -108,5 +106,7 @@ describe("/end command", () => {
     } as any;
 
     await endCommand!.execute(mockInteraction);
+
+    expect(mockThread.setArchived).toHaveBeenCalledWith(true);
   });
 });

@@ -6,7 +6,7 @@ import { registerMessageCreateHandler } from "./events/messageCreate.js";
 import { registerReadyHandler } from "./events/ready.js";
 import { env } from "./lib/config.js";
 import { prisma } from "./lib/prisma.js";
-import { rehydrateSessions } from "./services/conversation.js";
+import { activeSessions, rehydrateSessions } from "./services/conversation.js";
 
 // Register event handlers
 registerReadyHandler(client);
@@ -31,6 +31,20 @@ async function shutdown(signal: string) {
   }, 10_000);
 
   try {
+    // Save active sessions BEFORE destroying client (Pitfall 5: save before Prisma disconnect)
+    console.log(`Saving ${activeSessions.size} active sessions...`);
+    for (const [_threadId, session] of activeSessions) {
+      await prisma.session.update({
+        where: { id: session.id },
+        data: {
+          summary: session.summary,
+          messageCount: session.messageCount,
+          correctionCount: session.correctionCount,
+        },
+      });
+    }
+    console.log("Active sessions saved");
+
     await client.destroy();
     console.log("Discord client destroyed");
 
@@ -64,6 +78,8 @@ async function main() {
 
   await client.login(env.DISCORD_TOKEN);
   console.log("Bot logged in successfully");
+
+  await rehydrateSessions(client);
 }
 
 main().catch((err) => {

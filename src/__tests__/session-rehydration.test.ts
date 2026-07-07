@@ -41,6 +41,7 @@ describe("Session Rehydration", () => {
 
   it("loads active sessions from DB on startup", async () => {
     mockPrisma.session.findMany.mockResolvedValue([mockActiveSession]);
+    mockPrisma.session.update.mockResolvedValue({ ...mockActiveSession });
 
     const { rehydrateSessions, activeSessions } = await import(
       "../services/conversation.js"
@@ -73,6 +74,7 @@ describe("Session Rehydration", () => {
 
   it("ends sessions whose threads were deleted", async () => {
     mockPrisma.session.findMany.mockResolvedValue([mockActiveSession]);
+    mockPrisma.session.update.mockResolvedValue({ ...mockActiveSession });
 
     const { rehydrateSessions, activeSessions } = await import(
       "../services/conversation.js"
@@ -96,9 +98,9 @@ describe("Session Rehydration", () => {
     expect(activeSessions.size).toBe(0);
   });
 
-  it("skips non-active sessions", async () => {
-    const endedSession = { ...mockActiveSession, status: "ended" };
-    mockPrisma.session.findMany.mockResolvedValue([endedSession]);
+  it("unarchives threads that were archived", async () => {
+    const mockSetArchived = vi.fn().mockResolvedValue(undefined);
+    mockPrisma.session.findMany.mockResolvedValue([mockActiveSession]);
 
     const { rehydrateSessions, activeSessions } = await import(
       "../services/conversation.js"
@@ -109,14 +111,15 @@ describe("Session Rehydration", () => {
         fetch: vi.fn().mockResolvedValue({
           id: "thread-1",
           isThread: () => true,
-          archived: false,
-          setArchived: vi.fn().mockResolvedValue(undefined),
+          archived: true,
+          setArchived: mockSetArchived,
         }),
       },
     } as any;
 
     await rehydrateSessions(mockClient);
 
-    expect(activeSessions.size).toBe(0);
+    expect(mockSetArchived).toHaveBeenCalledWith(false);
+    expect(activeSessions.size).toBe(1);
   });
 });

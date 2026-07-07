@@ -1,8 +1,9 @@
 import type { Client } from "discord.js";
 import { commands } from "../commands/index.js";
+import { rehydrateSessions } from "../services/conversation.js";
 
 export function registerReadyHandler(client: Client): void {
-  client.on("ready", () => {
+  client.on("ready", async () => {
     console.log(`Logged in as ${client.user?.tag}`);
     console.log(`Serving ${client.guilds.cache.size} guilds`);
     console.log(
@@ -13,5 +14,7 @@ export function registerReadyHandler(client: Client): void {
         })
         .join(", ")}`,
     );
+
+    await rehydrateSessions(client);
   });
 }
