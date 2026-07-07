@@ -1,9 +1,15 @@
 services:
+  postgres:
+    ports:
+      - "5432:5432"
+
   bot:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    command: npx tsx watch src/index.ts
+    command: sh dev-start.sh
+    ports:
+      - "5555:5555"
     volumes:
       - .:/app
       - /app/node_modules
