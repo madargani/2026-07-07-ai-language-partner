@@ -6,7 +6,7 @@ An AI-driven language learning Discord bot that combines freeform conversational
 
 ## Phases
 
-- [ ] **Phase 1: Foundation & Setup** - Discord bot skeleton, PostgreSQL database, Docker Compose deployment, and /setup command for language configuration
+- [x] **Phase 1: Foundation & Setup** - Discord bot skeleton, PostgreSQL database, Docker Compose deployment, and /setup command for language configuration
 - [ ] **Phase 2: AI Conversation** - Natural target-language conversation sessions with LLM-powered responses and contextual corrections
 - [ ] **Phase 3: FSRS Spaced Repetition Bank** - Vocabulary and grammar item management with ts-fsrs scheduling engine
 - [ ] **Phase 4: Extraction & Review** - Background extraction pipeline and structured SRS review flow
@@ -27,7 +27,7 @@ An AI-driven language learning Discord bot that combines freeform conversational
    5. All slash commands respond within 3 seconds using deferReply() pattern
 **Plans**: 1 plan
 Plans:
-- [ ] 01-01-PLAN.md — Walking Skeleton: project scaffold, Prisma/PostgreSQL, /ping, /setup, /new, Docker Compose
+- [x] 01-01-PLAN.md — Walking Skeleton (verified: Discord commands, Docker Compose, graceful shutdown)
 
 ### Phase 2: AI Conversation
 **Goal**: Users can hold natural target-language conversations with the bot, receiving contextual corrections without breaking conversational flow
@@ -84,7 +84,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Setup | 1 plan | Planning | 2026-07-07 |
+| 1. Foundation & Setup | 1/1 | ✓ Complete | 2026-07-07 |
 | 2. AI Conversation | TBD | Not started | - |
 | 3. FSRS Spaced Repetition Bank | TBD | Not started | - |
 | 4. Extraction & Review | TBD | Not started | - |
