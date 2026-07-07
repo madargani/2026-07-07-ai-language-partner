@@ -2,13 +2,16 @@ import "dotenv/config";
 import { client } from "./client.js";
 import { deployCommands } from "./deploy-commands.js";
 import { registerInteractionCreateHandler } from "./events/interactionCreate.js";
+import { registerMessageCreateHandler } from "./events/messageCreate.js";
 import { registerReadyHandler } from "./events/ready.js";
 import { env } from "./lib/config.js";
 import { prisma } from "./lib/prisma.js";
+import { rehydrateSessions } from "./services/conversation.js";
 
 // Register event handlers
 registerReadyHandler(client);
 registerInteractionCreateHandler(client);
+registerMessageCreateHandler(client);
 
 // ──────────────────────────────────────────────────
 // Graceful shutdown

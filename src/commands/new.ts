@@ -1,11 +1,22 @@
-import { MessageFlags, SlashCommandBuilder } from "discord.js";
+import {
+  MessageFlags,
+  SlashCommandBuilder,
+  SlashCommandStringOption,
+} from "discord.js";
 import { prisma } from "../lib/prisma.js";
+import { createSession } from "../services/conversation.js";
 import type { Command } from "../types/discord.js";
 
 export const command: Command = {
   data: new SlashCommandBuilder()
     .setName("new")
-    .setDescription("Start a new conversation session"),
+    .setDescription("Start a new conversation session")
+    .addStringOption(
+      new SlashCommandStringOption()
+        .setName("session_name")
+        .setDescription("Optional name for your session")
+        .setRequired(false),
+    ),
 
   async execute(interaction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -21,8 +32,8 @@ export const command: Command = {
       return;
     }
 
-    await interaction.editReply(
-      "📝 Conversation sessions are coming in Phase 2! You're all configured — your target language is ready.",
-    );
+    const sessionName = interaction.options.getString("session_name") ?? undefined;
+
+    await createSession(interaction, sessionName);
   },
 };
