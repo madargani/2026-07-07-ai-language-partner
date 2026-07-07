@@ -7,7 +7,7 @@ An AI-driven language learning Discord bot that combines freeform conversational
 ## Phases
 
 - [x] **Phase 1: Foundation & Setup** - Discord bot skeleton, PostgreSQL database, Docker Compose deployment, and /setup command for language configuration
-- [ ] **Phase 2: AI Conversation** - Natural target-language conversation sessions with LLM-powered responses and contextual corrections
+- [x] **Phase 2: AI Conversation** - Natural target-language conversation sessions with LLM-powered responses and contextual corrections (completed 2026-07-07)
 - [ ] **Phase 3: FSRS Spaced Repetition Bank** - Vocabulary and grammar item management with ts-fsrs scheduling engine
 - [ ] **Phase 4: Extraction & Review** - Background extraction pipeline and structured SRS review flow
 - [ ] **Phase 5: Session Summary** - Post-session insights, strengths, expansion metrics, and queue health
@@ -47,11 +47,11 @@ Plans:
   4. Session survives bot restart — state rehydrates from PostgreSQL and conversation can resume
   5. Session context summarizes after 20 turns to control costs; only /summary or /end closes a session
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans complete
 Plans:
 
 - [x] 02-01-PLAN.md — Core conversation loop: /new, message handler, GPT-4o-mini responses with corrections
-- [ ] 02-02-PLAN.md — Session lifecycle: /end, /summary, summarization, rehydration, graceful shutdown
+- [x] 02-02-PLAN.md — Session lifecycle: /end, /summary, summarization, rehydration, graceful shutdown
 
 ### Phase 3: FSRS Spaced Repetition Bank
 
@@ -105,7 +105,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Setup | 1/1 | ✓ Complete | 2026-07-07 |
-| 2. AI Conversation | 1/2 | In Progress|  |
+| 2. AI Conversation | 2/2 | Complete   | 2026-07-07 |
 | 3. FSRS Spaced Repetition Bank | TBD | Not started | - |
 | 4. Extraction & Review | TBD | Not started | - |
 | 5. Session Summary | TBD | Not started | - |

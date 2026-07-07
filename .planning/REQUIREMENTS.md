@@ -19,9 +19,9 @@
 - [ ] **CONV-03**: User replies via chat, bot responds with natural conversation
 - [ ] **CONV-04**: Correction budget enforces max 2 major errors corrected per message
 - [ ] **CONV-05**: Correction block is appended to the Discord embed (separate from response)
-- [ ] **CONV-06**: Session context is summarized after 20 turns to control costs
-- [ ] **CONV-07**: Only /summary or /end closes a session (no auto-expiry)
-- [ ] **CONV-08**: Session state persists to PostgreSQL and rehydrates on restart
+- [x] **CONV-06**: Session context is summarized after 20 turns to control costs
+- [x] **CONV-07**: Only /summary or /end closes a session (no auto-expiry)
+- [x] **CONV-08**: Session state persists to PostgreSQL and rehydrates on restart
 
 ### FSRS Spaced Repetition Bank
 
@@ -100,9 +100,9 @@
 | CONV-03 | Phase 2 | Pending |
 | CONV-04 | Phase 2 | Pending |
 | CONV-05 | Phase 2 | Pending |
-| CONV-06 | Phase 2 | Pending |
-| CONV-07 | Phase 2 | Pending |
-| CONV-08 | Phase 2 | Pending |
+| CONV-06 | Phase 2 | Complete |
+| CONV-07 | Phase 2 | Complete |
+| CONV-08 | Phase 2 | Complete |
 | FSRS-01 | Phase 3 | Pending |
 | FSRS-02 | Phase 3 | Pending |
 | FSRS-03 | Phase 3 | Pending |
@@ -131,6 +131,7 @@
 | INFRA-05 | Phase 1 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 38 total
 - Mapped to phases: 38
 - Unmapped: 0 ✅
