@@ -4,7 +4,7 @@ import { mockPrisma } from "./setup.js";
 const mockActiveSession = {
   id: "session-1",
   discordThreadId: "thread-1",
-  userId: "user-1",
+  userId: "user-uuid-1",
   status: "active",
   summary: "Previous conversation summary",
   messageCount: 5,
@@ -12,6 +12,13 @@ const mockActiveSession = {
   createdAt: new Date(),
   endedAt: null,
   updatedAt: new Date(),
+  user: {
+    id: "user-uuid-1",
+    discordId: "user-1",
+    nativeLanguage: "en",
+    targetLanguage: "es",
+    configured: true,
+  },
   messages: [
     {
       id: "msg-1",

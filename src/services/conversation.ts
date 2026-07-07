@@ -185,7 +185,7 @@ export async function createSession(
   activeSessions.set(thread.id, {
     id: session.id,
     thread: thread as ThreadChannel,
-    userId: user.id,
+    userId: interaction.user.id,
     summary: "",
     messageCount: 1,
     correctionCount: 0,
@@ -372,6 +372,7 @@ export async function rehydrateSessions(client: Client): Promise<void> {
   const activeSessionData = await prisma.session.findMany({
     where: { status: "active" },
     include: {
+      user: true,
       messages: {
         orderBy: { createdAt: "desc" },
         take: 10,
@@ -404,7 +405,7 @@ export async function rehydrateSessions(client: Client): Promise<void> {
       activeSessions.set(sessionData.discordThreadId, {
         id: sessionData.id,
         thread,
-        userId: sessionData.userId,
+        userId: sessionData.user.discordId,
         summary: sessionData.summary ?? "",
         messageCount: sessionData.messageCount,
         correctionCount: sessionData.correctionCount,
