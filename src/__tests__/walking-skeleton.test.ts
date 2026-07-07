@@ -102,6 +102,11 @@ describe("Prisma singleton", () => {
 // ─────────────────────────────────────────────────────
 
 describe("Command structure", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    process.env.DISCORD_CLIENT_ID = "test-client-id";
+  });
+
   it("all commands have data (SlashCommandBuilder) and execute function", async () => {
     const { commands } = await import("../commands/index.js");
 
@@ -169,6 +174,11 @@ describe("Graceful shutdown", () => {
 // ─────────────────────────────────────────────────────
 
 describe("/setup command", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    process.env.DISCORD_CLIENT_ID = "test-client-id";
+  });
+
   it("calls prisma.user.upsert with correct shape on completion", async () => {
     const { commands } = await import("../commands/index.js");
     const setupCommand = commands.find((c) => {
@@ -199,6 +209,11 @@ describe("/setup command", () => {
 // ─────────────────────────────────────────────────────
 
 describe("/new command", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    process.env.DISCORD_CLIENT_ID = "test-client-id";
+  });
+
   it("returns error telling unconfigured user to run /setup", async () => {
     // Mock unconfigured user lookup
     mockPrisma.user.findUnique.mockResolvedValue({

@@ -10,6 +10,8 @@ const envSchema = z.object({
     .default("development"),
   DISCORD_GUILD_ID: z.string().optional(),
   OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
+  CONVERSATION_MODEL: z.string().default("gpt-4o"),
+  EXTRACTION_MODEL: z.string().default("gpt-4o-mini"),
 });
 
 export const env = envSchema.parse(process.env);

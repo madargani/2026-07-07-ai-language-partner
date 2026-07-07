@@ -14,6 +14,7 @@ import {
   type ThreadChannel,
 } from "discord.js";
 import type { Client } from "discord.js";
+import { env } from "../lib/config.js";
 import { prisma } from "../lib/prisma.js";
 import type { ActiveSession, ParseCorrectionsResult } from "../types/session.js";
 
@@ -200,7 +201,7 @@ async function generateGreeting(targetLanguage: string): Promise<string> {
   const langPrompt = `Generate a warm, natural greeting in ${targetLanguage} for a language learner starting a conversation practice session. Keep it friendly and beginner-appropriate (1-2 sentences). Do NOT include any corrections, just the greeting.`;
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: env.EXTRACTION_MODEL,
     messages: [
       { role: "system" as const, content: SYSTEM_PROMPT },
       { role: "user" as const, content: langPrompt },
@@ -238,7 +239,7 @@ export async function handleConversationMessage(
   );
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: env.CONVERSATION_MODEL,
     messages: contextMessages,
     temperature: 0.7,
     max_tokens: 1024,
