@@ -24,8 +24,10 @@ An AI-driven language learning Discord bot that combines freeform conversational
   2. User settings persist across bot restarts (verified by restarting container and re-checking)
   3. First-time user running /new is prompted through /setup before proceeding
   4. Docker Compose starts all services (bot, PostgreSQL, Redis) with a single command
-  5. All slash commands respond within 3 seconds using deferReply() pattern
-**Plans**: TBD
+   5. All slash commands respond within 3 seconds using deferReply() pattern
+**Plans**: 1 plan
+Plans:
+- [ ] 01-01-PLAN.md — Walking Skeleton: project scaffold, Prisma/PostgreSQL, /ping, /setup, /new, Docker Compose
 
 ### Phase 2: AI Conversation
 **Goal**: Users can hold natural target-language conversations with the bot, receiving contextual corrections without breaking conversational flow
@@ -82,7 +84,7 @@ An AI-driven language learning Discord bot that combines freeform conversational
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Setup | TBD | Not started | - |
+| 1. Foundation & Setup | 1 plan | Planning | 2026-07-07 |
 | 2. AI Conversation | TBD | Not started | - |
 | 3. FSRS Spaced Repetition Bank | TBD | Not started | - |
 | 4. Extraction & Review | TBD | Not started | - |
