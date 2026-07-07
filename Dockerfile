@@ -23,11 +23,12 @@ FROM node:22-alpine AS run
 
 WORKDIR /app
 
-# Copy compiled output, node_modules, Prisma schema, and startup script
+# Copy compiled output, node_modules, Prisma schema, prompts, and startup script
 COPY --from=build /app/dist/ ./dist/
 COPY --from=build /app/node_modules/ ./node_modules/
 COPY --from=build /app/prisma/ ./prisma/
 COPY --from=build /app/package.json ./
+COPY --from=build /app/src/prompts/ ./dist/prompts/
 COPY start.sh ./start.sh
 
 # Apply pending migrations, then start the bot
