@@ -70,6 +70,17 @@ vi.mock("discord.js", async () => {
       on: vi.fn(),
       login: vi.fn().mockResolvedValue("token"),
       destroy: vi.fn().mockResolvedValue(undefined),
+      channels: {
+        fetch: vi.fn().mockResolvedValue({
+          id: "thread-1",
+          isThread: () => true,
+          setArchived: vi.fn().mockResolvedValue(undefined),
+          send: vi.fn().mockResolvedValue(undefined),
+          joinable: true,
+          join: vi.fn().mockResolvedValue(undefined),
+          members: { add: vi.fn().mockResolvedValue(undefined) },
+        }),
+      },
     })),
     SlashCommandBuilder: actual.SlashCommandBuilder,
     CommandInteraction: vi.fn(),
