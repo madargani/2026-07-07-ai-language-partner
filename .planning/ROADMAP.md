@@ -40,7 +40,10 @@ Plans:
   3. Corrections are capped at max 2 major errors per message (user sees no more than 2 regardless of actual errors)
   4. Session survives bot restart — state rehydrates from PostgreSQL and conversation can resume
   5. Session context summarizes after 20 turns to control costs; only /summary or /end closes a session
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — Core conversation loop: /new, message handler, GPT-4o-mini responses with corrections
+- [ ] 02-02-PLAN.md — Session lifecycle: /end, /summary, summarization, rehydration, graceful shutdown
 
 ### Phase 3: FSRS Spaced Repetition Bank
 **Goal**: Vocabulary and grammar items are stored with complete FSRS scheduling fields and managed by the ts-fsrs algorithm
