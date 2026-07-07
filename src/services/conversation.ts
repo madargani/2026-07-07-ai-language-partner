@@ -78,8 +78,6 @@ export function parseCorrections(content: string): ParseCorrectionsResult {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
-    if (corrections.length >= 2) break;
-
     const match = trimmed.match(
       /Original:\s*(.+?)\s*→\s*Corrected:\s*(.+?)(?:\s*$|\s*-\s*(.+))/,
     );

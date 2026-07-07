@@ -62,21 +62,19 @@ describe("Conversation Service", () => {
     expect(json.color).toBe(0x2ecc71);
   });
 
-  it("caps corrections at max 2", async () => {
+  it("parses all corrections (no hard cap)", async () => {
     const { parseCorrections } = await import("../services/conversation.js");
 
-    const longCorrections = [
-      { original: "Hola", corrected: "¡Hola!", explanation: "Missing exclamation" },
-      { original: "Como", corrected: "Cómo", explanation: "Missing accent" },
-      { original: "Estas", corrected: "Estás", explanation: "Missing accent" },
-      { original: "Bien", corrected: "Bien", explanation: "Wrong word" },
-    ];
-
-    const testContent = `##CORRECTIONS##\n${longCorrections.map((c) => `Original: ${c.original} → Corrected: ${c.corrected}`).join("\n")}\n##SEPARATOR##\n##RESPONSE##\nHola!`;
+    const testContent = `##CORRECTIONS##
+Original: Estas → Corrected: Estás - Missing accent
+Original: Bien → Corrected: Bien - Wrong word
+Original: library → Corrected: biblioteca - Code-switching
+##SEPARATOR##
+##RESPONSE##
+Hola!`;
     const result = parseCorrections(testContent);
 
-    if (result.corrections) {
-      expect(result.corrections.length).toBeLessThanOrEqual(2);
-    }
+    expect(result.corrections).toBeDefined();
+    expect(result.corrections!.length).toBe(3);
   });
 });
