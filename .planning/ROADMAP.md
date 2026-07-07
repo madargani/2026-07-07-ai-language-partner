@@ -88,7 +88,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Setup | 1/1 | ✓ Complete | 2026-07-07 |
-| 2. AI Conversation | TBD | Not started | - |
+| 2. AI Conversation | 0/2 | ◆ In Progress | - |
 | 3. FSRS Spaced Repetition Bank | TBD | Not started | - |
 | 4. Extraction & Review | TBD | Not started | - |
 | 5. Session Summary | TBD | Not started | - |
