@@ -4,11 +4,11 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 02
 current_phase_name: ai-conversation
-status: verifying
-stopped_at: Phase 2 context gathered
+status: shipped
+stopped_at: Phase 2 verified and shipped — PR #1
 last_updated: "2026-07-09T00:00:00.000Z"
 last_activity: 2026-07-09
-last_activity_desc: Phase 02 shipped locally
+last_activity_desc: Phase 02 verified and shipped — PR #1
 progress:
   total_phases: 5
   completed_phases: 2
@@ -30,8 +30,8 @@ See: .planning/PROJECT.md (updated 2026-07-07)
 
 Phase: 02 (ai-conversation) — SHIPPED
 Plan: 2 of 2
-Status: Phase 02 shipped locally — no remote configured
-Last activity: 2026-07-09 — Phase 02 shipped locally
+Status: Phase 02 verified and shipped — PR #1
+Last activity: 2026-07-09 — Phase 02 verified and shipped — PR #1
 
 Progress: [████████░░] 80%
 
