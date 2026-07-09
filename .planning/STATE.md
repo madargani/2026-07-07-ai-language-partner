@@ -4,11 +4,10 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 02
 current_phase_name: ai-conversation
-status: shipped
-stopped_at: Phase 2 verified and shipped — PR #1
-last_updated: "2026-07-09T00:00:00.000Z"
+status: active
+stopped_at: Phase 2 fully verified (3/3 manual UAT checks passed)
 last_activity: 2026-07-09
-last_activity_desc: Phase 02 verified and shipped — PR #1
+last_activity_desc: Phase 02 fully verified — all 3 manual Discord checks passed. Ready for Phase 3.
 progress:
   total_phases: 5
   completed_phases: 2
@@ -34,6 +33,10 @@ Status: Phase 02 verified and shipped — PR #1
 Last activity: 2026-07-09 — Phase 02 verified and shipped — PR #1
 
 Progress: [████████░░] 80%
+
+## Next Steps
+
+Phase 3 follows: FSRS Spaced Repetition Bank — requires context gathering and planning.
 
 ## Performance Metrics
 
