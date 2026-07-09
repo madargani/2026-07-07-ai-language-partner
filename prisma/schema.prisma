@@ -16,6 +16,7 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   sessions       Session[]
+  reviewItems    ReviewItem[]
 }
 
 model Session {
@@ -47,4 +48,27 @@ model Message {
 
   @@index([sessionId])
   @@index([createdAt])
+}
+
+model ReviewItem {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  source        String
+  type          String   // "vocabulary" | "grammar"
+  language      String
+  stability     Float
+  difficulty    Float
+  state         Int      @default(0)  // 0=New, 1=Learning, 2=Review, 3=Relearning
+  due           DateTime @default(now())
+  elapsedDays   Int      @default(0)
+  scheduledDays Int      @default(0)
+  reps          Int      @default(0)
+  lapses        Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, due])
+  @@index([userId, type])
 }
