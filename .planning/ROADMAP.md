@@ -8,7 +8,7 @@ An AI-driven language learning Discord bot that combines freeform conversational
 
 - [x] **Phase 1: Foundation & Setup** - Discord bot skeleton, PostgreSQL database, Docker Compose deployment, and /setup command for language configuration
 - [x] **Phase 2: AI Conversation** - Natural target-language conversation sessions with LLM-powered responses and contextual corrections (completed 2026-07-07)
-- [ ] **Phase 3: FSRS Spaced Repetition Bank** - Vocabulary and grammar item management with ts-fsrs scheduling engine
+- [x] **Phase 3: FSRS Spaced Repetition Bank** - Vocabulary and grammar item management with ts-fsrs scheduling engine (completed 2026-07-09)
 - [ ] **Phase 4: Extraction & Review** - Background extraction pipeline and structured SRS review flow
 - [ ] **Phase 5: Session Summary** - Post-session insights, strengths, expansion metrics, and queue health
 
@@ -66,7 +66,9 @@ Plans:
   3. New users start with seeded population parameters so first reviews produce sensible intervals (not zero/default values)
   4. Review intervals for items under 3 months old are capped at 14 days maximum
 
-**Plans**: TBD
+**Plans**: 1/1 plans complete
+
+- [x] 03-01-PLAN.md
 
 ### Phase 4: Extraction & Review
 
@@ -106,6 +108,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Foundation & Setup | 1/1 | ✓ Complete | 2026-07-07 |
 | 2. AI Conversation | 2/2 | Complete   | 2026-07-07 |
-| 3. FSRS Spaced Repetition Bank | TBD | Not started | - |
+| 3. FSRS Spaced Repetition Bank | 1/1 | Complete   | 2026-07-09 |
 | 4. Extraction & Review | TBD | Not started | - |
 | 5. Session Summary | TBD | Not started | - |

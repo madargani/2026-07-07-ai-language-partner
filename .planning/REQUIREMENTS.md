@@ -25,11 +25,11 @@
 
 ### FSRS Spaced Repetition Bank
 
-- [ ] **FSRS-01**: Vocabulary items stored with FSRS fields (stability, difficulty, state, etc.)
-- [ ] **FSRS-02**: Grammar pattern items stored with same FSRS fields
-- [ ] **FSRS-03**: ts-fsrs algorithm updates scheduling on each review
-- [ ] **FSRS-04**: Cold start handled with population parameter seeding
-- [ ] **FSRS-05**: Review intervals capped at 14 days for first 3 months per item
+- [x] **FSRS-01**: Vocabulary items stored with FSRS fields (stability, difficulty, state, etc.)
+- [x] **FSRS-02**: Grammar pattern items stored with same FSRS fields
+- [x] **FSRS-03**: ts-fsrs algorithm updates scheduling on each review
+- [x] **FSRS-04**: Cold start handled with population parameter seeding
+- [x] **FSRS-05**: Review intervals capped at 14 days for first 3 months per item
 
 ### Background Extraction Pipeline
 
@@ -103,11 +103,11 @@
 | CONV-06 | Phase 2 | Complete |
 | CONV-07 | Phase 2 | Complete |
 | CONV-08 | Phase 2 | Complete |
-| FSRS-01 | Phase 3 | Pending |
-| FSRS-02 | Phase 3 | Pending |
-| FSRS-03 | Phase 3 | Pending |
-| FSRS-04 | Phase 3 | Pending |
-| FSRS-05 | Phase 3 | Pending |
+| FSRS-01 | Phase 3 | Complete |
+| FSRS-02 | Phase 3 | Complete |
+| FSRS-03 | Phase 3 | Complete |
+| FSRS-04 | Phase 3 | Complete |
+| FSRS-05 | Phase 3 | Complete |
 | EXTR-01 | Phase 4 | Pending |
 | EXTR-02 | Phase 4 | Pending |
 | EXTR-03 | Phase 4 | Pending |
