@@ -23,6 +23,12 @@ const { mockPrisma } = vi.hoisted(() => {
       findMany: ReturnType<typeof vi.fn>;
       deleteMany: ReturnType<typeof vi.fn>;
     };
+    reviewItem: {
+      create: ReturnType<typeof vi.fn>;
+      findUnique: ReturnType<typeof vi.fn>;
+      findMany: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
+    };
   };
 
   const mock: PrismaMock = {
@@ -42,6 +48,12 @@ const { mockPrisma } = vi.hoisted(() => {
       createMany: vi.fn().mockResolvedValue({ count: 2 }),
       findMany: vi.fn().mockResolvedValue([]),
       deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+    },
+    reviewItem: {
+      create: vi.fn().mockResolvedValue(null),
+      findUnique: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([]),
+      update: vi.fn().mockResolvedValue(null),
     },
     $disconnect: vi.fn().mockResolvedValue(undefined),
     $connect: vi.fn().mockResolvedValue(undefined),
