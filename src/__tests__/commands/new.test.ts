@@ -1,32 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockPrisma } from "../setup.js";
 
+const mockOpenAICreate = vi.fn().mockResolvedValue({
+  choices: [
+    {
+      message: {
+        content:
+          "##CORRECTIONS##\n\n##RESPONSE##\n¡Hola! ¿Cómo estás?",
+      },
+    },
+  ],
+});
+
 vi.mock("openai", () => {
-  const mockCreate = vi.fn().mockResolvedValue({
-    choices: [
-      {
-        message: {
-          content:
-            "##CORRECTIONS##\n\n##RESPONSE##\n¡Hola! ¿Cómo estás?",
+  function MockOpenAI() {
+    return {
+      chat: {
+        completions: {
+          create: mockOpenAICreate,
         },
       },
-    ],
-  });
+    };
+  }
   return {
-    default: vi.fn(() => ({
-      chat: {
-        completions: {
-          create: mockCreate,
-        },
-      },
-    })),
-    OpenAI: vi.fn(() => ({
-      chat: {
-        completions: {
-          create: mockCreate,
-        },
-      },
-    })),
+    default: MockOpenAI,
+    OpenAI: MockOpenAI,
   };
 });
 

@@ -23,7 +23,7 @@ Deliver the operational foundation: a working Discord bot skeleton that connects
 ## Implementation Decisions
 
 ### Bot Project Structure
-- **D-01:** Source tree organized by feature (`setup/`, `conversation/`, `review/` etc.)
+- **D-01:** Source tree organized by type for Phase 1 (`src/commands/`, `src/events/`, `src/lib/`, `src/types/`). Feature-based directories (`setup/`, `conversation/`, `review/`) deferred to Phase 2+ when multiple commands per domain exist.
 - **D-02:** Shared utilities in `src/lib/` or `src/shared/`
 - **D-03:** Commands as single files (SlashCommandBuilder + execute() in one file)
 - **D-04:** Single `tsconfig.json` (no composite project)
