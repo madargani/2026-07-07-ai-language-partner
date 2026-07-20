@@ -84,7 +84,11 @@ Plans:
   4. User can rate each card on the FSRS scale (Again=0, Hard=1, Good=2, Easy=3) and the next review date updates immediately
   5. Review flow continues presenting cards until the queue is empty or the user exits via button
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Extraction pipeline: BullMQ/Redis queue, GPT-4o-mini worker with structured output, post-conversation enqueue hook, dedup, graceful shutdown
+- [ ] 04-02-PLAN.md — Review command: /review with FSRS rating buttons (Again/Hard/Good/Easy), template-based prompts, recursive card flow, timeout handling
 
 ### Phase 5: Session Summary
 
