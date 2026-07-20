@@ -4,9 +4,9 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 03
 current_phase_name: fsrs-spaced-repetition-bank
-status: verifying
+status: "Phase 1-3 shipped — PR #1"
 stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-07-20T05:30:38.584Z"
+last_updated: "2026-07-20T05:32:15.028Z"
 last_activity: 2026-07-20
 progress:
   total_phases: 5
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-07)
 
 Phase: 03 (fsrs-spaced-repetition-bank) — EXECUTED
 Plan: 1 of 1 — Complete
-Status: Phase 3 verified ✓ — all 37 tests pass, 5/5 requirements satisfied
+Status: Phase 1-3 shipped — PR #1
 Last activity: 2026-07-20
 
 Progress: [████████░░] 60%
