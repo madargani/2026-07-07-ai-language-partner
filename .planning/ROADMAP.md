@@ -87,7 +87,12 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 04-01-PLAN.md — Extraction pipeline: BullMQ/Redis queue, GPT-4o-mini worker with structured output, post-conversation enqueue hook, dedup, graceful shutdown
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 04-02-PLAN.md — Review command: /review with FSRS rating buttons (Again/Hard/Good/Easy), template-based prompts, recursive card flow, timeout handling
 
 ### Phase 5: Session Summary
