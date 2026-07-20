@@ -2,6 +2,7 @@ import type { Command } from "../types/discord.js";
 import { command as addItemCommand } from "./add-item.js";
 import { command as newCommand } from "./new.js";
 import { command as pingCommand } from "./ping.js";
+import { command as reviewCommand } from "./review.js";
 import { command as setupCommand } from "./setup.js";
 import { command as endCommand } from "./end.js";
 import { command as summaryCommand } from "./summary.js";
@@ -13,4 +14,5 @@ export const commands: Command[] = [
   endCommand,
   summaryCommand,
   addItemCommand,
+  reviewCommand,
 ];
