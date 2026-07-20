@@ -4,17 +4,17 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 04
 current_phase_name: extraction-review
-status: "Phase 4 executing"
-stopped_at: Phase 4 execution started
-last_updated: "2026-07-20T06:10:00.000Z"
+status: "Phase 4 complete"
+stopped_at: Phase 4 execution complete
+last_updated: "2026-07-20T06:15:00.000Z"
 last_activity: 2026-07-20
-last_activity_desc: Phase 4 execution started
+last_activity_desc: Phase 4 execution complete
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 6
-  completed_plans: 4
-  percent: 60
+  completed_plans: 6
+  percent: 80
 ---
 
 # Project State
@@ -24,20 +24,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** Users can practice a language through natural conversation, with corrections and spaced repetition working in the background to optimize retention — without breaking conversational flow.
-**Current focus:** Phase 04 — extraction-review
+**Current focus:** Phase 05 — session-summary
 
 ## Current Position
 
-Phase: 04 (extraction-review) — EXECUTING
-Plan: 1 of 2 — Pending
-Status: Phase 4 executing
-Last activity: 2026-07-20 — Phase 4 execution started
+Phase: 04 (extraction-review) — COMPLETE
+Plan: 2 of 2 — Complete
+Status: Phase 4 complete
+Last activity: 2026-07-20 — Phase 4 execution complete
 
-Progress: [████████░░] 60%
+Progress: [████████░░] 80%
 
 ## Next Steps
 
-Execute Phase 4: Extraction & Review — automatic card extraction from conversation via BullMQ/Redis background pipeline, plus structured /review command with FSRS rating.
+Phase 5 follows: Session Summary — post-session insights, top strengths, expansion metrics, and queue health display.
 
 ## Performance Metrics
 

@@ -9,7 +9,7 @@ An AI-driven language learning Discord bot that combines freeform conversational
 - [x] **Phase 1: Foundation & Setup** - Discord bot skeleton, PostgreSQL database, Docker Compose deployment, and /setup command for language configuration
 - [x] **Phase 2: AI Conversation** - Natural target-language conversation sessions with LLM-powered responses and contextual corrections (completed 2026-07-07)
 - [x] **Phase 3: FSRS Spaced Repetition Bank** - Vocabulary and grammar item management with ts-fsrs scheduling engine (completed 2026-07-09)
-- [ ] **Phase 4: Extraction & Review** - Background extraction pipeline and structured SRS review flow
+- [x] **Phase 4: Extraction & Review** - Background extraction pipeline and structured SRS review flow
 - [ ] **Phase 5: Session Summary** - Post-session insights, strengths, expansion metrics, and queue health
 
 ## Phase Details
@@ -84,16 +84,16 @@ Plans:
   4. User can rate each card on the FSRS scale (Again=0, Hard=1, Good=2, Easy=3) and the next review date updates immediately
   5. Review flow continues presenting cards until the queue is empty or the user exits via button
 
-**Plans**: 2 plans
+**Plans**: 2/2 plans complete
 
 Plans:
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — Extraction pipeline: BullMQ/Redis queue, GPT-4o-mini worker with structured output, post-conversation enqueue hook, dedup, graceful shutdown
+- [x] 04-01-PLAN.md — Extraction pipeline: BullMQ/Redis queue, GPT-4o-mini worker with structured output, post-conversation enqueue hook, dedup, graceful shutdown
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 04-02-PLAN.md — Review command: /review with FSRS rating buttons (Again/Hard/Good/Easy), template-based prompts, recursive card flow, timeout handling
+- [x] 04-02-PLAN.md — Review command: /review with FSRS rating buttons (Again/Hard/Good/Easy), template-based prompts, recursive card flow, timeout handling
 
 ### Phase 5: Session Summary
 
@@ -118,5 +118,5 @@ Plans:
 | 1. Foundation & Setup | 1/1 | ✓ Complete | 2026-07-07 |
 | 2. AI Conversation | 2/2 | Complete   | 2026-07-07 |
 | 3. FSRS Spaced Repetition Bank | 1/1 | Complete   | 2026-07-09 |
-| 4. Extraction & Review | TBD | Not started | - |
+| 4. Extraction & Review | 2/2 | ✓ Complete | 2026-07-20 |
 | 5. Session Summary | TBD | Not started | - |
