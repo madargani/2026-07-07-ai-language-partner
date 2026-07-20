@@ -26,6 +26,7 @@ const { mockPrisma } = vi.hoisted(() => {
     reviewItem: {
       create: ReturnType<typeof vi.fn>;
       findUnique: ReturnType<typeof vi.fn>;
+      findFirst: ReturnType<typeof vi.fn>;
       findMany: ReturnType<typeof vi.fn>;
       update: ReturnType<typeof vi.fn>;
     };
@@ -52,6 +53,7 @@ const { mockPrisma } = vi.hoisted(() => {
     reviewItem: {
       create: vi.fn().mockResolvedValue(null),
       findUnique: vi.fn().mockResolvedValue(null),
+      findFirst: vi.fn().mockResolvedValue(null),
       findMany: vi.fn().mockResolvedValue([]),
       update: vi.fn().mockResolvedValue(null),
     },
@@ -72,6 +74,37 @@ vi.mock("@prisma/client", () => ({
 // ──────────────────────────────────────────────────
 // Mock discord.js classes
 // ──────────────────────────────────────────────────
+
+vi.mock("bullmq", () => ({
+  Queue: vi.fn(function () {
+    return {
+      add: vi.fn().mockResolvedValue({ id: "job-1" }),
+      drain: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+  }),
+  Worker: vi.fn(function () {
+    return {
+      on: vi.fn(),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+  }),
+}));
+
+vi.mock("ioredis", () => {
+  return {
+    default: vi.fn(function () {
+      return {
+        on: vi.fn(),
+        quit: vi.fn().mockResolvedValue(undefined),
+      };
+    }),
+  };
+});
+
+vi.mock("openai/helpers/zod", () => ({
+  zodResponseFormat: vi.fn((schema, name) => ({ type: "json_schema", json_schema: { schema, name } })),
+}));
 
 vi.mock("discord.js", async () => {
   const actual =

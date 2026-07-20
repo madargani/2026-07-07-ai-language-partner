@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 03
-current_phase_name: fsrs-spaced-repetition-bank
-status: "Phase 1-3 shipped — PR #1"
-stopped_at: Phase 4 context gathered
-last_updated: "2026-07-20T06:05:51.288Z"
+current_phase: 04
+current_phase_name: extraction-review
+status: "Phase 4 executing"
+stopped_at: Phase 4 execution started
+last_updated: "2026-07-20T06:10:00.000Z"
 last_activity: 2026-07-20
-last_activity_desc: Phase 04 planning complete
+last_activity_desc: Phase 4 execution started
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 4
+  total_plans: 6
   completed_plans: 4
   percent: 60
 ---
@@ -24,20 +24,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** Users can practice a language through natural conversation, with corrections and spaced repetition working in the background to optimize retention — without breaking conversational flow.
-**Current focus:** Phase 03 — fsrs-spaced-repetition-bank
+**Current focus:** Phase 04 — extraction-review
 
 ## Current Position
 
-Phase: 03 (fsrs-spaced-repetition-bank) — EXECUTED
-Plan: 1 of 1 — Complete
-Status: Phase 1-3 shipped — PR #1
-Last activity: 2026-07-20 — Phase 04 planning complete
+Phase: 04 (extraction-review) — EXECUTING
+Plan: 1 of 2 — Pending
+Status: Phase 4 executing
+Last activity: 2026-07-20 — Phase 4 execution started
 
 Progress: [████████░░] 60%
 
 ## Next Steps
 
-Phase 4 follows: Extraction & Review — automatic card extraction from conversation via BullMQ/Redis background pipeline, plus structured /review command with FSRS rating.
+Execute Phase 4: Extraction & Review — automatic card extraction from conversation via BullMQ/Redis background pipeline, plus structured /review command with FSRS rating.
 
 ## Performance Metrics
 

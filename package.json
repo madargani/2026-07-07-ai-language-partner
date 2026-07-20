@@ -15,8 +15,10 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
+    "bullmq": "^5.80.9",
     "discord.js": "^14.26.0",
     "dotenv": "^17.4.0",
+    "ioredis": "^5.11.1",
     "openai": "^6.45.0",
     "tiktoken": "^1.0.22",
     "ts-fsrs": "^5.4.1",

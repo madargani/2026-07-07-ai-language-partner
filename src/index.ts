@@ -7,6 +7,7 @@ import { registerReadyHandler } from "./events/ready.js";
 import { env } from "./lib/config.js";
 import { prisma } from "./lib/prisma.js";
 import { activeSessions, rehydrateSessions } from "./services/conversation.js";
+import { extractionQueue, extractionWorker } from "./lib/queue.js";
 
 // Register event handlers
 registerReadyHandler(client);
@@ -31,6 +32,14 @@ async function shutdown(signal: string) {
   }, 10_000);
 
   try {
+    // Close extraction worker before saving sessions
+    console.log("Closing extraction worker...");
+    await extractionWorker.close();
+    console.log("Extraction worker closed");
+    console.log("Draining extraction queue...");
+    await extractionQueue.drain();
+    console.log("Extraction queue drained");
+
     // Save active sessions BEFORE destroying client (Pitfall 5: save before Prisma disconnect)
     console.log(`Saving ${activeSessions.size} active sessions...`);
     for (const [_threadId, session] of activeSessions) {
@@ -80,6 +89,8 @@ async function main() {
   console.log("Bot logged in successfully");
 
   await rehydrateSessions(client);
+
+  console.log("Extraction worker initialized (concurrency=1)");
 }
 
 main().catch((err) => {
