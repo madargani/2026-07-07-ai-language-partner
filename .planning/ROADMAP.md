@@ -72,7 +72,7 @@ Plans:
 
 ### Phase 4: Extraction & Review
 
-**Goal**: Conversation content is automatically extracted into FSRS cards via background pipeline; users can review due cards with structured prompts and FSRS rating
+**Goal**: As a language learner, I want to automatically extract vocabulary from my conversations into FSRS cards and review due cards with structured prompts, so that I can build a vocabulary bank and retain what I learn through spaced repetition.
 **Mode**: mvp
 **Depends on**: Phases 2, 3
 **Requirements**: EXTR-01, EXTR-02, EXTR-03, EXTR-04, EXTR-05, EXTR-06, REVW-01, REVW-02, REVW-03, REVW-04, REVW-05
