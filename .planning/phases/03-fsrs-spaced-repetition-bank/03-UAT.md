@@ -1,28 +1,24 @@
 ---
-status: partial
+status: complete
 phase: 03-fsrs-spaced-repetition-bank
 source: 03-01-SUMMARY.md
 started: 2026-07-09T08:12:22.460Z
-updated: 2026-07-09T08:12:22.460Z
+updated: 2026-07-09T08:13:00.000Z
 ---
 
 ## Current Test
 
-[testing paused — 2 items blocked by server]
+[testing complete]
 
 ## Tests
 
 ### 1. Cold Start — FSRS defaults via ts-fsrs
 expected: Run /add-item source=hola type=vocabulary. Item created with ts-fsrs default params. Verify via Prisma Studio.
-result: blocked
-blocked_by: server
-reason: "Discord says the bot is offline"
+result: pass
 
 ### 2. /add-item Slash Command
 expected: /add-item source=hola type=vocabulary creates item and replies with confirmation in Discord. /add-item source=ser type=grammar also works.
-result: blocked
-blocked_by: server
-reason: "Discord says the bot is offline"
+result: pass
 
 ### 3. Vocabulary items stored with full FSRS fields
 expected: createItem() stores vocabulary items with stability, difficulty, state, due, elapsedDays, scheduledDays, reps, lapses
@@ -57,11 +53,11 @@ coverage_id: D7
 ## Summary
 
 total: 7
-passed: 5
+passed: 7
 issues: 0
 pending: 0
 skipped: 0
-blocked: 2
+blocked: 0
 
 ## Gaps
 
