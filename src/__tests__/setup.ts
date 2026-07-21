@@ -29,7 +29,14 @@ const { mockPrisma } = vi.hoisted(() => {
       findFirst: ReturnType<typeof vi.fn>;
       findMany: ReturnType<typeof vi.fn>;
       update: ReturnType<typeof vi.fn>;
+      count: ReturnType<typeof vi.fn>;
     };
+    sessionSummary: {
+      create: ReturnType<typeof vi.fn>;
+      findUnique: ReturnType<typeof vi.fn>;
+      findMany: ReturnType<typeof vi.fn>;
+    };
+    $transaction: ReturnType<typeof vi.fn>;
   };
 
   const mock: PrismaMock = {
@@ -56,7 +63,14 @@ const { mockPrisma } = vi.hoisted(() => {
       findFirst: vi.fn().mockResolvedValue(null),
       findMany: vi.fn().mockResolvedValue([]),
       update: vi.fn().mockResolvedValue(null),
+      count: vi.fn().mockResolvedValue(0),
     },
+    sessionSummary: {
+      create: vi.fn().mockResolvedValue({ id: "ss-1", sessionId: "session-1" }),
+      findUnique: vi.fn().mockResolvedValue(null),
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    $transaction: vi.fn().mockImplementation(async (ops: Promise<unknown>[]) => Promise.all(ops)),
     $disconnect: vi.fn().mockResolvedValue(undefined),
     $connect: vi.fn().mockResolvedValue(undefined),
     $on: vi.fn(),

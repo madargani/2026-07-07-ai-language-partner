@@ -23,23 +23,47 @@ export const command: Command = {
       return;
     }
 
-    await endSession(interaction.user.id);
+    // Pass summary data to endSession for SessionSummary persistence (per D-13)
+    await endSession(interaction.user.id, {
+      strengths: summary.strengths,
+      expandedCount: summary.expandedCount,
+      queueHealth: summary.queueHealth,
+      summary: summary.summary,
+    });
 
     const embed = new EmbedBuilder()
       .setColor(0x3498db)
       .setTitle("📊 Session Summary")
       .addFields(
+        // ── Existing fields ──
         { name: "Messages", value: String(summary.messageCount), inline: true },
-        {
-          name: "Corrections",
-          value: String(summary.correctionCount),
-          inline: true,
-        },
+        { name: "Corrections", value: String(summary.correctionCount), inline: true },
         { name: "Duration", value: summary.duration, inline: true },
+
+        // ── Separator ──
+        { name: "\u200B", value: "\u200B", inline: false },
+
+        // ── Strengths (per D-03) ──
+        {
+          name: "🏆 Top Strengths",
+          value: summary.hasStrengths
+            ? summary.strengths
+                .map((s, i) => `**${i + 1}. ${s.term}** — ${s.explanation}`)
+                .join("\n")
+            : "Session too short to analyze.",
+          inline: false,
+        },
+
+        // ── Expansion metrics (per D-08) ──
+        { name: "📈 New Items", value: `${summary.expandedCount} extracted`, inline: true },
+
+        // ── Queue health (per D-09, D-10) ──
+        { name: "📚 Queue", value: `${summary.queueHealth} due in 24h`, inline: true },
       )
       .setTimestamp();
 
     if (summary.summary) {
+      embed.addFields({ name: "\u200B", value: "\u200B", inline: false });
       embed.addFields({ name: "Summary", value: summary.summary });
     }
 
