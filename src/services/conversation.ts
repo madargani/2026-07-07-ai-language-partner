@@ -15,6 +15,7 @@ import {
 } from "discord.js";
 import type { Client } from "discord.js";
 import { env } from "../lib/config.js";
+import { getQueueHealth } from "./fsrs.js";
 import { prisma } from "../lib/prisma.js";
 import type { ActiveSession, ParseCorrectionsResult } from "../types/session.js";
 
@@ -23,6 +24,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const openai = new OpenAI();
 const SYSTEM_PROMPT = fs.readFileSync(
   path.join(__dirname, "..", "prompts", "conversation", "system.md"),
+  "utf-8",
+);
+
+const STRENGTHS_PROMPT = fs.readFileSync(
+  path.join(__dirname, "..", "prompts", "conversation", "strengths.md"),
   "utf-8",
 );
 
@@ -211,6 +217,55 @@ async function generateGreeting(targetLanguage: string): Promise<string> {
   return (
     completion.choices[0]?.message?.content ?? "¡Hola! ¿Cómo estás hoy?"
   );
+}
+
+/**
+ * Analyzes session messages to extract top 3 vocabulary/grammar strengths.
+ * Uses gpt-4o-mini (hardcoded per summarizer.ts pattern, not env.CONVERSATION_MODEL
+ * which defaults to gpt-4o — see RESEARCH.md Pitfall 4).
+ * Runs ONCE at /summary time (per D-04). Strengths are computed on-the-fly (per D-05).
+ */
+export async function analyzeStrengths(
+  sessionId: string,
+): Promise<{ term: string; explanation: string }[]> {
+  const messages = await prisma.message.findMany({
+    where: { sessionId },
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (messages.length < 2) {
+    return []; // Too short to analyze
+  }
+
+  const conversationText = messages
+    .map((m: { role: string; content: string }) => `${m.role}: ${m.content}`)
+    .join("\n");
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini", // Hardcoded per summarizer.ts pattern (Research Pitfall 4 mitigation)
+      messages: [
+        { role: "system" as const, content: STRENGTHS_PROMPT },
+        { role: "user" as const, content: conversationText },
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 500,
+    });
+
+    const parsed = JSON.parse(
+      completion.choices[0]?.message?.content ?? "[]",
+    );
+
+    // Validate shape: should be an array of { term, explanation } objects
+    if (Array.isArray(parsed)) {
+      return parsed.slice(0, 3);
+    }
+
+    return [];
+  } catch (err) {
+    console.error("Failed to analyze strengths:", err);
+    return []; // Fallback: empty strengths array (per D-05: on-the-fly, graceful degradation)
+  }
 }
 
 export async function handleConversationMessage(
