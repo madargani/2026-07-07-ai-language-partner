@@ -348,6 +348,12 @@ export async function handleConversationMessage(
 
 export async function endSession(
   userId: string,
+  summaryData?: {
+    strengths: { term: string; explanation: string }[];
+    expandedCount: number;
+    queueHealth: number;
+    summary: string;
+  },
 ): Promise<{
   sessionId: string;
   stats: { messageCount: number; correctionCount: number };
@@ -356,16 +362,37 @@ export async function endSession(
     if (session.userId === userId) {
       activeSessions.delete(threadId);
 
-      await prisma.session.update({
-        where: { id: session.id },
-        data: {
-          status: "ended",
-          endedAt: new Date(),
-          messageCount: session.messageCount,
-          correctionCount: session.correctionCount,
-        },
-      });
+      // Per D-13: Prisma $transaction for atomic session end + SessionSummary creation
+      const operations: unknown[] = [
+        prisma.session.update({
+          where: { id: session.id },
+          data: {
+            status: "ended",
+            endedAt: new Date(),
+            messageCount: session.messageCount,
+            correctionCount: session.correctionCount,
+          },
+        }),
+      ];
 
+      // Create SessionSummary if summary data is provided (per D-11, D-12)
+      if (summaryData) {
+        operations.push(
+          prisma.sessionSummary.create({
+            data: {
+              sessionId: session.id,
+              strengths: summaryData.strengths,
+              expandedCount: summaryData.expandedCount,
+              queueHealth: summaryData.queueHealth,
+              summary: summaryData.summary,
+            },
+          }),
+        );
+      }
+
+      await prisma.$transaction(operations);
+
+      // Per RESEARCH.md Pitfall 5: archive thread AFTER the transaction
       try {
         await session.thread.setArchived(true);
       } catch {
@@ -392,6 +419,11 @@ export async function getSessionSummary(
   correctionCount: number;
   summary: string;
   duration: string;
+  sessionId: string;
+  strengths: { term: string; explanation: string }[];
+  expandedCount: number;
+  queueHealth: number;
+  hasStrengths: boolean;
 } | null> {
   for (const [_threadId, session] of activeSessions) {
     if (session.userId === userId) {
@@ -410,11 +442,27 @@ export async function getSessionSummary(
       const duration =
         hours > 0 ? `${hours}h ${minutes}m` : `${minutes} min`;
 
+      // Per D-04: strength analysis runs ONCE at /summary time
+      const strengths = await analyzeStrengths(session.id);
+
+      // Per D-08: count ReviewItems with matching sessionId (handles concurrent sessions correctly)
+      const expandedCount = await prisma.reviewItem.count({
+        where: { sessionId: session.id },
+      });
+
+      // Per D-09, D-10: queue health via dedicated service function
+      const queueHealth = await getQueueHealth(userId);
+
       return {
         messageCount: session.messageCount,
         correctionCount: session.correctionCount,
         summary: dbSession.summary ?? "No summary available.",
         duration,
+        sessionId: session.id,             // per D-08: needed for expansion query + SessionSummary FK
+        strengths,                          // per D-01, D-05
+        expandedCount,                      // per D-08
+        queueHealth,                        // per D-09
+        hasStrengths: strengths.length > 0,
       };
     }
   }
