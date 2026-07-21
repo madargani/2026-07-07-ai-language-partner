@@ -73,6 +73,7 @@ export async function processExtractionJob(
         source: item.source,
         type: item.type,
         language: data.targetLanguage,
+        sessionId: data.sessionId,    // per D-07: stamp from job payload
       });
     } catch (err) {
       console.error("Failed to create item:", item.source, err);
