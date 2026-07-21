@@ -16,6 +16,7 @@ export interface CreateItemInput {
   source: string;
   type: ItemType;
   language: string;
+  sessionId?: string;       // per D-06: optional FK to Session
 }
 
 export interface RateItemInput {
@@ -39,6 +40,7 @@ export async function createItem(input: CreateItemInput) {
       source: input.source,
       type: input.type,
       language: input.language,
+      sessionId: input.sessionId,  // per D-06: passes undefined if absent
       stability: card.stability,
       difficulty: card.difficulty,
       state: card.state, // 0 = State.New
@@ -123,5 +125,24 @@ export async function getDueItems(userId: string) {
 export async function getItem(itemId: string) {
   return prisma.reviewItem.findUnique({
     where: { id: itemId },
+  });
+}
+
+/**
+ * Returns the count of ReviewItems due within the next 24 hours for a user.
+ * Used by the summary command to display queue health.
+ */
+export async function getQueueHealth(userId: string): Promise<number> {
+  const now = new Date();
+  const twentyFourHoursLater = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+  return prisma.reviewItem.count({
+    where: {
+      userId,
+      due: {
+        gte: now,
+        lte: twentyFourHoursLater,
+      },
+    },
   });
 }
