@@ -1,254 +1,237 @@
 # Phase 5: Session Summary — Research
 
 **Researched:** 2026-07-21
-**Domain:** Post-session insights (LLM strength analysis, FSRS queue health, expansion metrics), Prisma schema evolution, Discord embed enhancement
+**Domain:** Discord bot post-session analytics, LLM strength analysis, Prisma data persistence, queue health metrics
 **Confidence:** HIGH
 
 ## Summary
 
-Phase 5 enhances the existing `/summary` command (Phase 2) to deliver actionable post-session insights: top 3 strengths derived from LLM analysis of the conversation, vocabulary expansion metrics (count of ReviewItems auto-extracted during the session via the Phase 4 pipeline), and review queue health (items due within 24h). A new `SessionSummary` Prisma model persists the computed data with a 1:1 relation to Session. The `ReviewItem` model gains an optional `sessionId` FK so expansion counts can be attributed to the correct session.
+Phase 5 enhances the existing `/summary` command to deliver structured post-session insights: top 3 LLM-derived strengths, vocabulary expansion metrics via ReviewItem.sessionId tracking, and queue health count. A new `SessionSummary` Prisma model persists results for historical access. The extraction pipeline (Phase 4) already has `sessionId` in its job payload but does not stamp it on ReviewItems — this is the primary integration gap. The FSRS service (`createItem()`) lacks an optional `sessionId` parameter. The existing `getDueItems()` function can be adapted, or a new `getQueueHealth()` helper added. Embed patterns follow established blue-color, inline-field conventions from Phases 2 and 4.
 
-All the required infrastructure already exists: the extraction pipeline already stamps `sessionId` on job payloads (Phase 4), the FSRS service provides `getDueItems()` which can be adapted for 24h window queries, the LLM client is already wired, and the embed builder pattern is well-established. This phase is primarily about **wiring existing capabilities together** — no new external dependencies, no new services, no new infrastructure.
-
-**Primary recommendation:** Three conceptual changesets: (1) Schema: add `sessionId` to ReviewItem + create `SessionSummary` model + migration, (2) Code: pass `sessionId` through extraction pipeline to `createItem()`, add strength analysis + expansion/queue queries to conversation service, (3) UX: enhance the summary embed with the three new data fields and create SessionSummary atomically when the session ends.
-
-<user_constraints>
-## User Constraints (from CONTEXT.md)
-
-### Locked Decisions
-
-- **D-01:** Use LLM analysis of conversation to determine top 3 strengths — NOT ReviewItem rating tracking or session-based rating queries
-- **D-02:** Use the existing `CONVERSATION_MODEL` (gpt-4o-mini) for strength analysis. No new LLM provider or model key needed
-- **D-03:** Output format: specific vocabulary/grammar terms the user handled well, with brief explanations
-- **D-04:** Strength analysis runs ONCE at `/summary` time, not progressively during conversation
-- **D-05:** Strengths are computed on-the-fly at display time — NOT persisted to the database. No new fields or migrations needed for strengths
-- **D-06:** Add an optional nullable `sessionId` FK field on the `ReviewItem` Prisma model (FK → Session)
-- **D-07:** The extraction worker (`src/services/extraction.ts`) sets `sessionId` at creation time only. Existing dedup logic (findFirst on userId+source+type) skips duplicates — no sessionId is overwritten
-- **D-08:** Summary query counts ReviewItems where `sessionId` matches the current session. This handles concurrent sessions correctly
-- **D-09:** Display as raw count: `📚 Queue: X due in 24h` — no qualitative labels, no type breakdown
-- **D-10:** Query uses `updatedAt` within the session time window or a new FSRS service function for queue health within 24h
-- **D-11:** Create a new `SessionSummary` Prisma model with 1:1 relation to Session (unique FK)
-- **D-12:** SessionSummary fields: `sessionId` (FK, unique), `strengths` (JSON), `expandedCount` (Int), `queueHealth` (Int), plus the existing LLM `summary` text carried forward from Session. Timestamps (createdAt, updatedAt)
-- **D-13:** SessionSummary is created atomically when `/summary` terminates the session — written alongside the Session status update
-
-### the agent's Discretion
-
-- Exact SessionSummary field ordering, defaults, and column attributes — planner follows Prisma conventions
-- LLM prompt for strength analysis — researcher recommends based on the existing conversation and extraction prompt patterns
-- SessionSummary creation timing — whether to use a Prisma transaction with the session end update
-- Embed layout for the enhanced summary — how to arrange the 3 new fields alongside existing ones (embeds have 25-field limit, so order matters)
-- FSRS service: whether to add a `getQueueHealth(userId)` function or query directly in the summary command
-
-### Deferred Ideas (OUT OF SCOPE)
-
-None — discussion stayed within phase scope.
-</user_constraints>
+**Primary recommendation:** Add optional `sessionId` to `CreateItemInput`/`createItem()`, stamp it from the extraction payload, then build a `getQueueHealth()` function on the FSRS service for 24h-window queries. Create `SessionSummary` model with Prisma transaction wrapping the session end. Reuse `CONVERSATION_MODEL` (defaults to `gpt-4o` in config, but user decided `gpt-4o-mini` — see risk note) for on-the-fly strength analysis.
 
 <phase_requirements>
 ## Phase Requirements
 
 | ID | Description | Research Support |
 |----|-------------|------------------|
-| SUMM-01 | /summary terminates session and aggregates session data | Existing flow in `summary.ts` + `conversation.ts` — enhance `getSessionSummary()` and `endSession()`. Session termination already works (sets status="ended", endedAt). |
-| SUMM-02 | Embed displays top 3 strengths | New LLM strength analysis call at summary time. Requires: strength prompt file + inline LLM call before transaction. |
-| SUMM-03 | Embed displays expansion metrics (new items auto-extracted) | Count ReviewItems where `sessionId` matches current session. Extraction pipeline already stamps `sessionId` on job payloads — just needs to pass it to `createItem()`. |
-| SUMM-04 | Embed displays queue health (items due in next 24h) | Count ReviewItems where `userId` matches and `due` is within [now, now+24h]. Can use an adapted `getDueItems()` or inline Prisma query. |
-| SUMM-05 | Summary persists to PostgreSQL for historical tracking | New `SessionSummary` model created atomically with session end. Stores strengths (JSON), expandedCount, queueHealth, and session summary text. |
+| SUMM-01 | /summary terminates session and aggregates session data | Existing flow in `endSession()` and `getSessionSummary()` in conversation.ts — enhance to include new fields |
+| SUMM-02 | Embed displays top 3 strengths | LLM strength analysis via CONVERSATION_MODEL, on-the-fly at /summary time. Prompt pattern follows summarizer.ts |
+| SUMM-03 | Embed displays expansion metrics | ReviewItem.sessionId FK tracks which items were created during a session. Count via `prisma.reviewItem.count({ where: { sessionId } })` |
+| SUMM-04 | Embed displays queue health | Items due in next 24h. Query via new `getQueueHealth()` on FSRS service or inline `prisma.reviewItem.count()` |
+| SUMM-05 | Summary persists to PostgreSQL | New SessionSummary Prisma model. Created atomically in Prisma $transaction with session status update |
+
 </phase_requirements>
 
 ## Architectural Responsibility Map
 
 | Capability | Primary Tier | Secondary Tier | Rationale |
 |------------|-------------|----------------|-----------|
-| Strength analysis (LLM) | Bot (OpenAI SDK — inline call) | — | Called synchronously during `/summary` command via existing OpenAI SDK. No background processing needed — analysis is fast (<2s on gpt-4o-mini). |
-| Expansion metrics query | Database (PostgreSQL via Prisma) | Bot (Prisma query) | Count of ReviewItems with matching sessionId. Simple `prisma.reviewItem.count()`. |
-| Queue health query | Database (PostgreSQL via Prisma) | Bot (Prisma query) | Count of ReviewItems with due within 24h window for this user. |
-| Historical persistence | Database (PostgreSQL via Prisma) | Bot (command handler) | SessionSummary created in same transaction as session end. |
-| Embed display | Bot (discord.js EmbedBuilder) | — | Enhanced `/summary` command builds richer embed with 3 new fields. No UI rendering tier. |
-| sessionId tracking for items | Extraction worker → FSRS service → Database | — | Phase 4 extraction passes sessionId from job payload through to `createItem()`, which stores it on ReviewItem. |
+| Strength analysis LLM call | API / Backend | — | LLM call is server-side, no browser involvement. Uses existing OpenAI SDK |
+| Expansion metrics query | Database / Storage | API / Backend | Count query against ReviewItem table. API orchestrates the query |
+| Queue health query | Database / Storage | API / Backend | Count query against ReviewItem table with time-window filter |
+| SessionSummary persistence | Database / Storage | API / Backend | New model and migration. Written atomically via Prisma transaction |
+| Embed building and display | API / Backend | — | Discord embed is built server-side and sent via interaction.editReply |
 
 ## Standard Stack
 
-### Core (All existing — no new packages needed)
-
+### Core — All existing, no new packages
 | Library | Version | Purpose | Why Standard |
 |---------|---------|---------|--------------|
-| `discord.js` (existing) | ^14.26.x | EmbedBuilder, slash commands | Already in project. Enhanced embed needs no new discord.js features. |
-| `openai` (existing) | ^6.x | LLM strength analysis | Already in project. Use `chat.completions.create()` (not `parse()`) for strength analysis since output is free-text formatted strengths. |
-| `@prisma/client` (existing) | ^6.19.x | Database queries, transactions | Already in project. New migration adds ReviewItem.sessionId + SessionSummary model. |
-| `ts-fsrs` (existing) | ^5.4.x | Queue health uses ReviewItem.due field | Already in project. Queue health is a simple date-range query, no ts-fsrs logic needed. |
+| openai | ^6.45.0 | LLM strength analysis | Already used for conversation and extraction. No new SDK needed |
+| @prisma/client | ^6.19.0 | Database access | Existing ORM. SessionSummary model joins existing ReviewItem, Session, User |
+| discord.js | ^14.26.0 | Embed building | Existing. EmbedBuilder already used in summary.ts, review.ts |
+| ts-fsrs | ^5.4.1 | Queue health context | Existing FSRS service wraps ts-fsrs. No new algorithm work |
+
+### Alternatives Considered — None needed
+All capabilities use existing libraries. No new npm packages required for Phase 5.
+
+**Installation:** None — Phase 5 adds no new dependencies.
 
 ## Package Legitimacy Audit
 
-**No new npm packages required for this phase.** All work uses existing dependencies. The phase adds:
-- A Prisma migration (no new package)
-- Modifications to existing TypeScript files (no new imports)
-- A new prompt file for strength analysis (plain text, no package)
-
-**Packages removed due to [SLOP] verdict:** none
-**Packages flagged as suspicious [SUS]:** none
-**Packages verified OK:** Prisma migrate handles schema changes using existing `@prisma/client@^6.19.0` and `prisma@^6.19.0`.
+**No new packages installed in Phase 5.** All functionality uses existing dependencies (openai, @prisma/client, discord.js, ts-fsrs, zod). No audit required.
 
 ## Architecture Patterns
 
-### System Architecture Diagram
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            Discord Client                                   │
-│  User runs /summary                                                          │
-└──────────────────────────────┬──────────────────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  src/commands/summary.ts (ENHANCED)                                         │
-│                                                                             │
-│  1. deferReply()                                                            │
-│  2. Call ENHANCED getSessionSummary(userId) → computes ALL data:            │
-│     ├─ messageCount, correctionCount, duration (existing)                   │
-│     ├─ strengths[] — via LLM analysis of conversation messages              │
-│     ├─ expansionCount — prisma.reviewItem.count({ where: { sessionId } })   │
-│     └─ queueHealth — prisma.reviewItem.count({ where: { userId, due } })    │
-│  3. Build enhanced embed with all data                                      │
-│  4. Prisma $transaction:                                                    │
-│     ├─ prisma.session.update({ status: "ended", endedAt })                  │
-│     └─ prisma.sessionSummary.create({ strengths, expandedCount, ... })      │
-│  5. interaction.editReply({ embeds: [embed] })                              │
-└──────────────────────────────┬──────────────────────────────────────────────┘
-                               │
-            ┌──────────────────┼──────────────────┐
-            ▼                  ▼                  ▼
-┌────────────────────┐ ┌──────────────┐ ┌──────────────────┐
-│ OpenAI (gpt-4o-mini)│ │  Prisma      │ │  Prisma          │
-│ Strength analysis  │ │  ReviewItem  │ │  SessionSummary   │
-│ → top 3 specific   │ │  count by    │ │  create + Session │
-│   strengths with   │ │  sessionId   │ │  update (atomic   │
-│   explanations     │ │  & due window│ │  transaction)     │
-└────────────────────┘ └──────────────┘ └──────────────────┘
-```
-
-**Primary flow:**
-1. User runs `/summary` → `deferReply({ flags: Ephemeral })`
-2. `getSessionSummary()` enhanced to:
-   a. Find active session (existing)
-   b. Compute duration (existing)
-   c. Fetch all conversation messages for this session
-   d. Call `openai.chat.completions.create()` with strength analysis prompt → parse 3 strengths
-   e. Count ReviewItems with `sessionId` matching current session → expansionCount
-   f. Count ReviewItems where `due` is within [now, now+24h] for this user → queueHealth
-3. Build embed with: Messages | Corrections | Duration | Strengths | Expansion | Queue Health | Summary text
-4. Prisma `$transaction` to atomically end the session AND create SessionSummary
-5. Send embed
-
-### Data Flow for Expansion Metrics (D-06, D-07, D-08)
-
-```
-Phase 4 messageCreate.ts:              Phase 5 summary.ts:
-  extractionQueue.add({                   await prisma.reviewItem.count({
-    ...                                    where: { sessionId: activeSession.id }
-    sessionId: session.id,  ──────────┐  })
-  })                                  │
-        │                            │
-        ▼                            │
-Phase 4 extraction.ts:                │
-  processExtractionJob(data)          │
-    → createItem({                    │
-        sessionId: data.sessionId,  ──┘  ← NEW: pass sessionId through
-        userId, source, type, lang
-      })
-
-Key: sessionId is set ONLY at creation time (D-07).
-Dedup (findFirst on userId+source+type) skips creation for duplicates —
-no sessionId overwrite. Count is accurate for items extracted THIS session.
-```
-
-### Data Flow for Queue Health (D-09, D-10)
-
-```
-Queue health = count of ReviewItems where:
-  - userId = <current user's internal id>
-  - due >= now AND due <= now + 24 hours
-
-The `due` field on ReviewItem is set by ts-fsrs during:
-  - createItem() → createEmptyCard(now) → due = now (immediately due for new cards)
-  - rateItem() → scheduler.next() → updates due based on rating
-
-Query: prisma.reviewItem.count({
-  where: {
-    userId: user.id,
-    due: { gte: now, lte: add24h },
-  },
-})
-```
-
-### Timing: Strength Analysis Inline vs Background
-
-D-04 says strength analysis runs ONCE at `/summary` time. The LLM call is **synchronous** during the command execution:
+### Data Flow — Session Summary
 
 ```
 User runs /summary
-  → deferReply() [3 second window met]
-  → getSessionSummary()
-    → fetch messages (~10ms)
-    → LLM strength analysis (~1-2s on gpt-4o-mini)
-    → count expansions (~5ms)
-    → count queue health (~5ms)
-  → build embed (~2ms)
-  → transaction: end session + create SessionSummary (~20ms)
-  → editReply
-Total: ~1.5-2.5 seconds
-
-This fits within deferred reply limits (15 minutes). The user waits ~2s for
-the summary to appear, which is acceptable for this infrequent command.
+       │
+       ▼
+summary.ts execute()
+       │
+       ├─ 1. deferReply()
+       │
+       ├─ 2. getSessionSummary(userId) — enhanced
+       │      ├── Fetch ActiveSession from in-memory map
+       │      ├── Compute duration from Session.createdAt
+       │      └── [NEW] Compute on-the-fly:
+       │            ├── LLM strength analysis: analyze conversation messages → 3 strengths
+       │            ├── Expansion count: reviewItem.count({ where: { sessionId } })
+       │            └── Queue health: reviewItem.count({ where: { userId, due: { gte: now, lte: +24h } } })
+       │
+       ├─ 3. endSession(userId) — enhanced
+       │      ├── Update Session status → "ended", set endedAt
+       │      ├── Archive Discord thread
+       │      └── [NEW] Prisma $transaction:
+       │            ├── session.update({ status: "ended", endedAt, messageCount, correctionCount })
+       │            └── sessionSummary.create({ sessionId, strengths, expandedCount, queueHealth, summary })
+       │
+       ├─ 4. Build embed with all fields
+       │      ├── Messages, Corrections, Duration (existing)
+       │      ├── Strengths (3 inline fields), Expansion, Queue Health (new)
+       │      └── LLM summary text (existing)
+       │
+       └─ 5. interaction.editReply({ embeds: [embed] })
 ```
 
-### Recommended Project Structure (Changes Only)
+### Recommended Project Structure — No structural changes needed
 
+All integration points are within existing files. No new directories needed.
+
+### Pattern 1: LLM Strength Analysis (modeled on summarizer.ts)
+
+**What:** Use OpenAI with the existing `CONVERSATION_MODEL` to analyze conversation messages and extract 3 specific vocabulary/grammar strengths.
+
+**When to use:** Once at `/summary` time, after fetching messages for the session.
+
+**How the summarizer.ts pattern works:**
+1. Load system prompt from `prompts/conversation/strengths.md`
+2. Fetch all messages for the session from Prisma
+3. Format messages as `"role: content"` lines
+4. Call `openai.chat.completions.create()` with the prompt
+5. Parse structured output
+
+**Recommended strengths prompt strategy:**
+```typescript
+// Strengths extraction using existing summarizer pattern
+const strengthsPrompt = fs.readFileSync(
+  path.join(__dirname, "..", "prompts", "conversation", "strengths.md"),
+  "utf-8",
+);
+
+const messages = await prisma.message.findMany({
+  where: { sessionId },
+  orderBy: { createdAt: "asc" },
+});
+
+const conversationText = messages
+  .map((m) => `${m.role}: ${m.content}`)
+  .join("\n");
+
+const completion = await openai.chat.completions.create({
+  model: env.CONVERSATION_MODEL,
+  messages: [
+    { role: "system", content: strengthsPrompt },
+    { role: "user", content: conversationText },
+  ],
+  response_format: { type: "json_object" },
+  max_tokens: 500,
+});
+
+const strengths = JSON.parse(completion.choices[0]?.message?.content ?? "[]");
+// Expected output format per D-03:
+// [{ "term": "Preterite tense", "explanation": "used 'comí' and 'bebiste' correctly" }]
 ```
-src/
-├── commands/
-│   └── summary.ts              # MODIFY — enhanced embed, transaction
-├── services/
-│   ├── conversation.ts         # MODIFY — extended getSessionSummary(), endSession()/new atomic fn
-│   ├── fsrs.ts                 # MODIFY — add optional sessionId param to createItem()
-│   └── extraction.ts           # MODIFY — pass sessionId from job payload to createItem()
-├── prompts/
-│   └── conversation/
-│       ├── system.md           # EXISTING — no change
-│       ├── summarize.md        # EXISTING — no change
-│       └── strengths.md        # NEW — strength analysis prompt for top 3 strengths
-├── types/
-│   └── session.ts              # MODIFY — update SessionSummary return type
-prisma/
-├── schema.prisma               # MODIFY — add sessionId to ReviewItem, add SessionSummary model
-└── migrations/                  # NEW — auto-generated by `prisma migrate dev`
+
+### Pattern 2: ReviewItem.sessionId Stamping
+
+**What:** Pass optional `sessionId` through `createItem()` and stamp it on creation.
+
+**Extraction payload already has `sessionId`** — verified in `src/types/extraction.ts`:
+```typescript
+// Already exists — no change needed to the job payload
+export const ExtractionJobPayloadSchema = z.object({
+  userId: z.string().uuid(),
+  sessionId: z.string().uuid(),   // ← ALREADY present
+  messageContent: z.string().min(1).max(2000),
+  targetLanguage: z.string().min(1),
+  nativeLanguage: z.string().min(1),
+  recentContext: z.string().max(5000),
+});
 ```
 
-### Pattern 1: Prisma Schema — Add sessionId to ReviewItem + Create SessionSummary
-
-```prisma
-// Source: CONTEXT.md D-06, D-11, D-12 — locked decisions
-// [ASSUMED — derived from decisions, schema follows existing conventions]
-
-model ReviewItem {
-  // ... existing fields ...
-  sessionId String?              // NEW: optional FK → Session (D-06)
-  session   Session?  @relation(fields: [sessionId], references: [id])
-
-  @@index([sessionId])           // NEW: index for expansion metrics queries
-  @@index([userId])
-  @@index([userId, due])
-  @@index([userId, type])
+**Changes needed to `src/services/fsrs.ts`:**
+```typescript
+// Extend CreateItemInput:
+export interface CreateItemInput {
+  userId: string;
+  source: string;
+  type: ItemType;
+  language: string;
+  sessionId?: string;  // ← NEW optional field
 }
 
+// Pass through to prisma.reviewItem.create():
+return prisma.reviewItem.create({
+  data: {
+    userId: input.userId,
+    source: input.source,
+    type: input.type,
+    language: input.language,
+    sessionId: input.sessionId,  // ← NEW: passes through or undefined
+    stability: card.stability,
+    // ... rest unchanged
+  },
+});
+```
+
+**Changes needed to `src/services/extraction.ts`:**
+```typescript
+// Inside processExtractionJob(), in the createItem call:
+await createItem({
+  userId: data.userId,
+  source: item.source,
+  type: item.type,
+  language: data.targetLanguage,
+  sessionId: data.sessionId,  // ← NEW: stamp from job payload
+});
+```
+
+### Pattern 3: Queue Health Query
+
+**What:** Count ReviewItems due within the next 24-hour window for a user.
+
+**Two approaches (agent's discretion):**
+
+**Option A — New service function on fsrs.ts (recommended):**
+```typescript
+export async function getQueueHealth(userId: string): Promise<number> {
+  const now = new Date();
+  const twentyFourHoursLater = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  
+  return prisma.reviewItem.count({
+    where: {
+      userId,
+      due: {
+        gte: now,
+        lte: twentyFourHoursLater,
+      },
+    },
+  });
+}
+```
+
+**Option B — Inline query in summary command.** Simpler but duplicates query logic. Option A keeps query responsibility in the FSRS service.
+
+**Recommendation:** Option A. The FSRS service already owns `getDueItems()`. A `getQueueHealth()` function is a natural companion — discoverable, testable, follows the established pattern.
+
+### Pattern 4: SessionSummary Prisma Model and Transaction
+
+**What:** Create a SessionSummary model with 1:1 relation to Session. Write atomically with session end.
+
+**Prisma model:**
+```prisma
 model SessionSummary {
   id            String   @id @default(uuid())
-  sessionId     String   @unique                       // 1:1 FK → Session
+  sessionId     String   @unique
   session       Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  strengths     Json                                   // JSON array of strength objects
-  expandedCount Int      @default(0)
-  queueHealth   Int      @default(0)
-  summary       String   @default("")                  // Session summary text, carried forward
+  strengths     Json?    // JSON array of { term: string, explanation: string }[]
+  expandedCount Int
+  queueHealth   Int
+  summary       String?  // Carried forward from Session.summary, or re-run LLM
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -256,685 +239,367 @@ model SessionSummary {
 }
 ```
 
-**Key design decisions:**
-- `sessionId` on ReviewItem is **optional** (String?) — existing items without sessionId are valid. D-06 specifies "optional nullable."
-- `SessionSummary.sessionId` is **unique** — enforces 1:1 relation per session. D-11 specifies unique FK.
-- `onDelete: Cascade` — if a Session is deleted, its summary goes too. Matches the Message-Session relation convention.
-- `strengths` is `Json` — Prisma's JSON column maps naturally to the LLM output array. No separate table needed.
-- `summary` is carried forward from `Session.summary` (set by the summarizer service during conversation), not re-generated.
-
-### Pattern 2: FSRS Service — Add optional sessionId to createItem()
-
+**Transaction pattern in `endSession()`:**
 ```typescript
-// Source: CONTEXT.md D-06, D-07 — sessionId on ReviewItem
-// [ASSUMED — extends existing CreateItemInput type]
-
-// src/services/fsrs.ts — modify CreateItemInput and createItem()
-
-export interface CreateItemInput {
-  userId: string;
-  source: string;
-  type: ItemType;
-  language: string;
-  sessionId?: string;             // NEW: optional — set by extraction worker
-}
-
-export async function createItem(input: CreateItemInput) {
-  const now = new Date();
-  const card: Card = createEmptyCard(now);
-
-  return prisma.reviewItem.create({
+// In src/services/conversation.ts, enhanced endSession():
+const [updatedSession] = await prisma.$transaction([
+  prisma.session.update({
+    where: { id: session.id },
     data: {
-      userId: input.userId,
-      source: input.source,
-      type: input.type,
-      language: input.language,
-      sessionId: input.sessionId,  // NEW: optional FK
-      stability: card.stability,
-      difficulty: card.difficulty,
-      state: card.state,
-      due: card.due,
-      elapsedDays: card.elapsed_days,
-      scheduledDays: card.scheduled_days,
-      reps: card.reps,
-      lapses: card.lapses,
+      status: "ended",
+      endedAt: new Date(),
+      messageCount: session.messageCount,
+      correctionCount: session.correctionCount,
     },
-  });
-}
+  }),
+  prisma.sessionSummary.create({
+    data: {
+      sessionId: session.id,
+      strengths: strengthsJson,  // from LLM analysis
+      expandedCount,              // from count query
+      queueHealth,                // from getQueueHealth()
+      summary: dbSession.summary ?? null,
+    },
+  }),
+]);
 ```
 
-### Pattern 3: Extraction Worker — Pass sessionId to createItem()
-
-```typescript
-// Source: CONTEXT.md D-07 — extraction worker sets sessionId at creation time
-// [ASSUMED — extraction.ts already has sessionId in job payload]
-
-// src/services/extraction.ts — modify the createItem() call
-
-export async function processExtractionJob(
-  data: ExtractionJobPayload,
-): Promise<void> {
-  // ... existing LLM call logic ...
-
-  for (const item of parsed.detectedItems) {
-    try {
-      const existing = await prisma.reviewItem.findFirst({
-        where: {
-          userId: data.userId,
-          source: item.source,
-          type: item.type,
-        },
-      });
-
-      if (existing) {
-        // D-07: dedup — skip existing, do NOT overwrite sessionId
-        continue;
-      }
-
-      await createItem({
-        userId: data.userId,
-        source: item.source,
-        type: item.type,
-        language: data.targetLanguage,
-        sessionId: data.sessionId,     // ← NEW: pass sessionId from job payload
-      });
-    } catch (err) {
-      console.error("Failed to create item:", item.source, err);
-    }
-  }
-}
-```
-
-### Pattern 4: Enhanced getSessionSummary() with Strengths, Expansion, Queue Health
-
-```typescript
-// Source: CONTEXT.md D-01, D-04, D-05, D-08, D-10
-// [ASSUMED — extends existing getSessionSummary() with new data]
-
-// ─── Return type for the enhanced summary ───────────────────────────────────
-
-export interface SessionSummaryResult {
-  messageCount: number;
-  correctionCount: number;
-  summary: string;
-  duration: string;
-  strengths: string[];           // NEW: 3 strength descriptions
-  expansionCount: number;        // NEW: count of ReviewItems for this session
-  queueHealth: number;           // NEW: count of items due within 24h
-}
-
-// ─── New function: analyze strengths via LLM ────────────────────────────────
-
-async function analyzeStrengths(
-  messages: { role: string; content: string }[],
-  targetLanguage: string,
-): Promise<string[]> {
-  const conversationText = messages
-    .map((m) => `${m.role}: ${m.content}`)
-    .join("\n");
-
-  const prompt = fs.readFileSync(
-    path.join(__dirname, "..", "prompts", "conversation", "strengths.md"),
-    "utf-8",
-  );
-
-  const completion = await openai.chat.completions.create({
-    model: env.CONVERSATION_MODEL,   // D-02: use CONVERSATION_MODEL
-    messages: [
-      {
-        role: "system",
-        content: prompt.replace("{{targetLanguage}}", targetLanguage),
-      },
-      { role: "user", content: conversationText },
-    ],
-    temperature: 0.3,  // Low temp for consistent analysis
-    max_tokens: 500,
-  });
-
-  const text = completion.choices[0]?.message?.content ?? "";
-  // Parse: each line is a strength, or format as "• Strength: explanation"
-  // Keep parsing simple — each line is one strength item
-  return text
-    .split("\n")
-    .map((line) => line.replace(/^[-•*]\s*/, "").trim())
-    .filter(Boolean)
-    .slice(0, 3);  // D-01: top 3 strengths
-}
-
-// ─── Enhanced getSessionSummary() ───────────────────────────────────────────
-
-export async function getSessionSummary(
-  userId: string,
-): Promise<SessionSummaryResult | null> {
-  for (const [_threadId, session] of activeSessions) {
-    if (session.userId === userId) {
-      const dbSession = await prisma.session.findUnique({
-        where: { id: session.id },
-        include: { user: true },
-      });
-      if (!dbSession) return null;
-
-      // Duration (existing logic)
-      const startTime = dbSession.createdAt.getTime();
-      const now = Date.now();
-      const diffMs = now - startTime;
-      const diffMin = Math.floor(diffMs / 60000);
-      const hours = Math.floor(diffMin / 60);
-      const minutes = diffMin % 60;
-      const duration =
-        hours > 0 ? `${hours}h ${minutes}m` : `${minutes} min`;
-
-      // === NEW: Fetch data for enhanced summary ===
-
-      // 1. Fetch conversation messages for strength analysis
-      const messages = await prisma.message.findMany({
-        where: { sessionId: session.id },
-        orderBy: { createdAt: "asc" },
-      });
-
-      // 2. Strengths via LLM (D-04: runs ONCE at summary time)
-      const strengths = await analyzeStrengths(
-        messages.map((m) => ({ role: m.role, content: m.content })),
-        dbSession.user.targetLanguage,
-      );
-
-      // 3. Expansion metrics (D-08: count ReviewItems with matching sessionId)
-      const expansionCount = await prisma.reviewItem.count({
-        where: { sessionId: session.id },
-      });
-
-      // 4. Queue health (D-10: items due within 24h)
-      const nowDate = new Date();
-      const add24h = new Date(nowDate.getTime() + 24 * 60 * 60 * 1000);
-      const queueHealth = await prisma.reviewItem.count({
-        where: {
-          userId: dbSession.userId,
-          due: { gte: nowDate, lte: add24h },
-        },
-      });
-
-      return {
-        messageCount: session.messageCount,
-        correctionCount: session.correctionCount,
-        summary: dbSession.summary ?? "No summary available.",
-        duration,
-        strengths,
-        expansionCount,
-        queueHealth,
-      };
-    }
-  }
-  return null;
-}
-```
-
-### Pattern 5: Atomic Transaction — End Session + Create SessionSummary
-
-```typescript
-// Source: CONTEXT.md D-13 — atomic creation with session status update
-// [ASSUMED — Prisma $transaction pattern from Prisma docs on pg transactions]
-
-// src/commands/summary.ts — enhanced command
-
-import {
-  EmbedBuilder,
-  MessageFlags,
-  SlashCommandBuilder,
-} from "discord.js";
-import { endSession, getSessionSummary } from "../services/conversation.js";
-import { prisma } from "../lib/prisma.js";
-import type { Command } from "../types/discord.js";
-
-export const command: Command = {
-  data: new SlashCommandBuilder()
-    .setName("summary")
-    .setDescription("End your session and see a summary"),
-
-  async execute(interaction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-    // Step 1: Compute all summary data (includes inline LLM call for strengths)
-    const summary = await getSessionSummary(interaction.user.id);
-
-    if (!summary) {
-      await interaction.editReply("You don't have an active session.");
-      return;
-    }
-
-    // Step 2: Build the enhanced embed
-    const embed = new EmbedBuilder()
-      .setColor(0x3498db)
-      .setTitle("📊 Session Summary")
-      .addFields(
-        // Existing fields
-        { name: "Messages", value: String(summary.messageCount), inline: true },
-        { name: "Corrections", value: String(summary.correctionCount), inline: true },
-        { name: "Duration", value: summary.duration, inline: true },
-        // NEW: Strengths (D-01, D-03)
-        { name: "🏆 Strengths", value: summary.strengths.map((s, i) => `**${i+1}.** ${s}`).join("\n") || "None identified" },
-        // NEW: Expansion metrics (SUMM-03)
-        { name: "📖 New Items", value: `${summary.expansionCount} items extracted this session`, inline: true },
-        // NEW: Queue health (D-09)
-        { name: "📚 Queue", value: `${summary.queueHealth} due in 24h`, inline: true },
-      )
-      .setTimestamp();
-
-    if (summary.summary) {
-      embed.addFields({ name: "📝 Summary", value: summary.summary });
-    }
-
-    // Step 3: Atomic transaction (D-13) — end session + create SessionSummary
-    await prisma.$transaction([
-      // End session (existing endSession logic, but inline in transaction)
-      prisma.session.update({
-        where: { id: sessionId },  // Need sessionId from getSessionSummary
-        data: {
-          status: "ended",
-          endedAt: new Date(),
-          messageCount: summary.messageCount,
-          correctionCount: summary.correctionCount,
-        },
-      }),
-      // Create SessionSummary record (D-11, D-12)
-      prisma.sessionSummary.create({
-        data: {
-          sessionId: sessionId,  // Need sessionId from the active session
-          strengths: summary.strengths,  // JSON array
-          expandedCount: summary.expansionCount,
-          queueHealth: summary.queueHealth,
-          summary: summary.summary,
-        },
-      }),
-    ]);
-
-    // Step 4: Clean up in-memory session
-    // Note: endSession() logic must be modified — active session removal
-    // and thread archiving happen OUTSIDE the transaction (no DB dependency)
-    for (const [threadId, session] of activeSessions) {
-      if (session.userId === interaction.user.id) {
-        activeSessions.delete(threadId);
-        try {
-          await session.thread.setArchived(true);
-        } catch { /* thread may already be archived */ }
-        break;
-      }
-    }
-
-    // Step 5: Send the embed
-    await interaction.editReply({ embeds: [embed] });
-  },
-};
-```
-
-**Critical note on implementation:** The current `endSession()` function in `conversation.ts` both updates the DB and cleans up in-memory state (Map delete + thread archive). For Phase 5, `endSession()` must be split:
-- DB operations → `$transaction` with SessionSummary creation
-- In-memory cleanup → remain after the transaction
-
-The planner should either:
-(a) Extract a new `endSessionAndCreateSummary()` function, or
-(b) Modify the `/summary` command to do the transaction directly and call a lightweight cleanup function.
+**Why `$transaction`:** Per D-13, SessionSummary must be created atomically with the session end update. If the SessionSummary write fails, the session should not appear ended without its summary record. Prisma `$transaction` ensures both writes succeed or both roll back.
 
 ### Anti-Patterns to Avoid
 
-- **LLM call inside the transaction:** D-13 says the SessionSummary is created atomically. Compute strengths BEFORE entering the transaction. The transaction should only contain DB writes. Keep LLM I/O outside the transaction block.
+- **Modifying `getSummary()` return type without backward compatibility:** The existing `getSessionSummary()` returns `{ messageCount, correctionCount, summary, duration }`. The planner could either add new fields to this return type or create a parallel function. **Recommendation:** Extend the existing return type with `strengths`, `expandedCount`, `queueHealth` fields — fewer changes, single code path.
 
-- **Running strength analysis on every summary call without message caching:** Fetch messages once, pass to LLM once. Don't refetch after the LLM call.
+- **Stamping `sessionId` on dedup skip paths:** D-07 is explicit: sessionId is only set at creation time. The dedup logic (`findFirst` on userId+source+type) skips creation for duplicates — do NOT add sessionId overwrite logic in the skip branch.
 
-- **Storing the full conversation text in SessionSummary:** The `strengths` field stores only the 3 strength strings, not the full conversation. The session `summary` (set by summarizer service) captures the conversation context. Don't duplicate.
-
-- **Modifying `endSession()` for `/end` command:** The `/end` command (`commands/end.ts`) also calls `endSession()`. It should NOT create a SessionSummary (no summary data). Keep the existing behavior for `/end` — only the enhanced `/summary` path creates SessionSummary. Either add a parameter to `endSession()` or create a separate function.
-
-- **Missing `sessionId` index on ReviewItem:** D-08 requires counting ReviewItems by sessionId. Without an index, this scan will be O(n) over the entire ReviewItem table. Add `@@index([sessionId])` in the schema.
-
-- **Embed field overflow:** 3 existing fields + 3 new fields + summary text field = 7 fields total. Well within the 25-field limit. But the Strengths field value could exceed 1024 chars if strengths are verbose. Keep strength descriptions short (1-2 sentences each).
+- **Using `openai.chat.completions.create()` without `response_format` for JSON output:** The strength analysis prompt returns structured JSON. Always use `response_format: { type: "json_object" }` or the `parse()` method (extraction.ts pattern) to ensure parseable output.
 
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
 |---------|-------------|-------------|-----|
-| Strength analysis | Rating-based Easy tracking during session | LLM analysis at /summary time (D-01) | Rating-based tracking would require per-message Easy rating storage on messages and complex aggregation. LLM reads the conversation meaningfully. |
-| Expansion counting | Add counter field to Session model | Count ReviewItems by sessionId (D-08) | A counter field would need atomic increment on every extraction — fragile with concurrent jobs. Count-after-the-fact is accurate and simple. |
-| Queue health tracking | Persistent queue health tracking | Query ReviewItem due within 24h (D-10) | Queue health is a snapshot query. Persisting it would need refresh logic. The SessionSummary stores the snapshot value at end time. |
-| Atomicity | Manual rollback logic | Prisma `$transaction` (array or interactive) | Prisma transactions handle rollback automatically on error. Hand-rolled error handling with manual compensation is error-prone. |
+| LLM strength analysis | Custom rule-based analysis of message text | OpenAI SDK with structured prompt | Rule-based analysis is brittle across languages. LLM naturally understands vocabulary/grammar strengths |
+| FSRS scheduling | Manual due-date math | ts-fsrs library | Already in use. `getDueItems()` just needs a time-window adaptation |
+| Discord embed pagination | Custom split logic for >25 fields | Single embed (current design fits under limit) | Summary has ~6 fields total. Below the 25-field limit. No pagination needed |
 
-**Key insight:** This phase connects existing capabilities without introducing new infrastructure patterns. The LLM call for strength analysis follows the exact same pattern as the summarizer service (fetch messages, call LLM with prompt, parse output). The ReviewItem count queries are standard Prisma. The transaction pattern is standard Prisma `$transaction`.
+**Key insight:** Phase 5 builds entirely on existing infrastructure. No new library decisions — the challenge is integration plumbing (sessionId propagation, transaction boundaries).
 
 ## Common Pitfalls
 
-### Pitfall 1: LLM Strength Analysis Timeout
+### Pitfall 1: Forgetting to Add `sessionId` to Prisma Schema Before Extracting
+**What goes wrong:** The extraction worker stamps `sessionId` but the Prisma model doesn't have the field yet → runtime error on createItem().
+**Why it happens:** Schema migration and code changes get out of order.
+**How to avoid:** Run `prisma migrate dev --name add_session_id_to_review_items` BEFORE any code that writes sessionId. Generate migration first, then add to `createItem()` calls.
+**Warning signs:** Prisma validation error: `Unknown field 'sessionId' on ReviewItem`.
 
-**What goes wrong:** The strength analysis LLM call runs synchronously during the `/summary` command. If GPT-4o-mini is slow or the API is degraded, the user waits longer than expected.
+### Pitfall 2: LLM JSON Parsing Failure on Strength Analysis
+**What goes wrong:** The LLM returns unparseable JSON (markdown-wrapped, extra keys, or empty content) → JSON.parse throws.
+**Why it happens:** Without `response_format: { type: "json_object" }`, GPT-4o-mini may return natural language wrapping JSON.
+**How to avoid:** Use `response_format: { type: "json_object" }` on the OpenAI call. Wrap parsing in try/catch with a fallback message like "Strengths analysis unavailable."
+**Warning signs:** JSON.parse(SyntaxError) in production logs.
 
-**Why it happens:** gpt-4o-mini typically responds in ~1-2 seconds for simple analysis, but API rate limits or network issues can cause delays. The deferred reply window is 15 minutes, so this won't break the command — but it degrades UX.
+### Pitfall 3: Concurrent Session Summary Calls
+**What goes wrong:** User runs `/summary` twice rapidly from different Discord clients. Both calls find the same ActiveSession and try to end it.
+**Why it happens:** ActiveSession is stored in a Map — no locking mechanism. Two concurrent `endSession()` calls both delete from the Map, but both find the entry initially.
+**How to avoid:** Check session status before writing the final update. Add `where: { id, status: "active" }` to the session update so only the first call succeeds. The second call updates 0 rows and can respond "Session already ended."
+**Warning signs:** SessionSummary created twice for the same session (mitigated by `@unique` on sessionId).
 
-**How to avoid:** Set a conservative `max_tokens` (500) and consider a reasonable timeout on the HTTP request. The analysis is simple (identify 3 strengths from a conversation), so it shouldn't need many tokens.
+### Pitfall 4: CONVERSATION_MODEL Default Mismatch
+**What goes wrong:** D-02 says "Use the existing CONVERSATION_MODEL (gpt-4o-mini)" but the Zod config schema defaults `CONVERSATION_MODEL` to `"gpt-4o"` (line 13 of config.ts). This inconsistency means strength analysis may use a different model than expected unless explicitly configured.
+**How to avoid:** Either (a) explicitly set `CONVERSATION_MODEL=gpt-4o-mini` in the environment, or (b) hardcode `"gpt-4o-mini"` for strength analysis as done in `summarizer.ts` (which hardcodes `model: "gpt-4o-mini"`). **Recommendation:** Follow the summarizer.ts pattern and hardcode the model or use a dedicated env var if cost matters. Flag this inconsistency to the user during discuss-phase.
+**Warning signs:** Unexpected model costs or slower response times on strength analysis.
 
-```typescript
-const completion = await openai.chat.completions.create(
-  {
-    model: env.CONVERSATION_MODEL,
-    messages: [...],
-    temperature: 0.3,
-    max_tokens: 500,
-  },
-  { timeout: 10_000 },  // 10s timeout
-);
-```
-
-**Warning signs:** Users report that `/summary` takes "a long time" to respond.
-
-### Pitfall 2: SessionSummary Created But Session Not Ended (or Vice Versa)
-
-**What goes wrong:** If the database write fails after one operation completes, the session is ended but no SessionSummary is created (or summary is created but session remains active).
-
-**Why it happens:** Writing the session update and SessionSummary create as separate operations without a transaction.
-
-**How to avoid:** Always use Prisma `$transaction` (array form for independent operations) to ensure both succeed or both fail. Prisma 6 supports this pattern:
-
-```typescript
-await prisma.$transaction([
-  prisma.session.update({ where: { id }, data: { status: "ended", endedAt: new Date() } }),
-  prisma.sessionSummary.create({ data: { sessionId, strengths, ... } }),
-]);
-```
-
-**Warning signs:** Orphaned SessionSummary records or sessions stuck in "active" status after summary.
-
-### Pitfall 3: `/end` Command Also Creates SessionSummary (Shouldn't)
-
-**What goes wrong:** If the enhanced `endSession()` is called from both `/summary` and `/end`, the `/end` command will attempt to create a SessionSummary without having computed strength/expansion/queue data.
-
-**Why it happens:** Both commands share the same `endSession()` function.
-
-**How to avoid:** Two options:
-(a) Keep `endSession()` for `/end` (no SessionSummary). Create a separate `endSessionWithSummary()` for `/summary`.
-(b) Add an optional `summaryData` parameter to `endSession()` — if provided, create SessionSummary.
-
-The planner should decide. Option (a) is cleaner — no conditional branching in `endSession()`.
-
-### Pitfall 4: Embed Field Value Exceeds 1024 Characters
-
-**What goes wrong:** The Strengths field could exceed Discord's 1024-character limit per field value if strength descriptions are verbose.
-
-**Why it happens:** Each strength is ~200-300 chars of explanation. Three strengths = ~600-900 chars. This fits within 1024, but if strengths are wordy it could overflow.
-
-**How to avoid:** Keep each strength description to 1-2 sentences. If the total exceeds 1000 chars, truncate the last strength. The EmbedBuilder will throw if over the limit, so validate before building.
-
-```typescript
-const strengthsValue = summary.strengths
-  .map((s, i) => `**${i+1}.** ${s}`)
-  .join("\n");
-
-if (strengthsValue.length > 1024) {
-  // Truncate — keep first 2 strengths if 3 is too verbose
-  // Or: shorten descriptions
-}
-```
-
-**Warning signs:** EmbedBuilder throws `FIELD_VALUE_LENGTH` validation error.
-
-### Pitfall 5: Race Condition — Extraction Job Completes After Session Ends
-
-**What goes wrong:** A user runs `/summary` before all pending extraction jobs for that session have completed. The expansion count is lower than expected because some items weren't created yet.
-
-**Why it happens:** Extract jobs are async (BullMQ background processing). They may still be queued when the user ends the session.
-
-**How to avoid:**
-- This is an acceptable tradeoff for v1. The count is "items extracted so far" at the time of summary.
-- For a more accurate count in the future, the session could wait for pending extraction jobs (marker pattern) — but this adds complexity.
-- Document this behavior: expansion count is a snapshot at summary time, not a guaranteed complete count.
-
-**Warning signs:** N/A — expected behavior.
+### Pitfall 5: SessionSummary Creation After Thread Archive
+**What goes wrong:** The session thread is archived, then the SessionSummary write fails (DB connection issue). The session is permanently ended but the summary is lost.
+**Why it happens:** `session.thread.setArchived(true)` happens inside `endSession()`, before the SessionSummary transaction.
+**How to avoid:** Run the Prisma transaction FIRST, then archive the thread. If thread archiving fails, the summary is still persisted. This is the correct ordering — critical data before cosmetic cleanup.
 
 ## Code Examples
 
-### Strength Analysis Prompt (Recommended)
-
-```markdown
-<!-- Source: CONTEXT.md D-02, D-03 — derives from existing prompt patterns -->
-<!-- File: src/prompts/conversation/strengths.md -->
-
-Analyze the following {{targetLanguage}} conversation between a language learner and a native speaker tutor.
-
-Your task: Identify the TOP 3 things the user did well in this conversation session.
-
-Focus on specific vocabulary usage, grammar structures, or communication strategies that the user handled correctly and naturally. Be specific — mention exact words, phrases, or grammar patterns.
-
-Output format — exactly 3 lines, each starting with "•":
-• [Specific vocabulary/grammar]: [brief explanation of what the user did well]
-• [Specific vocabulary/grammar]: [brief explanation]
-• [Specific vocabulary/grammar]: [brief explanation]
-
-Examples:
-• Past tense (-ar verbs): Used "hablé", "trabajé", and "compré" with correct preterite conjugations throughout the conversation
-• Question formation: Correctly formed "¿Qué piensas?" and "¿Cuándo fuiste?" with proper intonation markers
-• Food vocabulary: Naturally used "desayuno", "almuerzo", and "cena" in context when describing daily routine
-
-Keep each explanation to 1-2 sentences. Write in English. Return exactly 3 strengths.
-```
-
-### Enhanced Embed Builder
+### Enhanced `getSessionSummary()` Return Type
 
 ```typescript
-// Source: discord.js v14 EmbedBuilder docs
-// [CITED: discordjs.guide/popular-topics/embeds]
-// [VERIFIED: npm registry — discord.js@14.26.x]
+// Extended return type for getSessionSummary
+interface SessionSummaryData {
+  messageCount: number;
+  correctionCount: number;
+  summary: string;
+  duration: string;
+  // New fields added by Phase 5:
+  strengths: Array<{ term: string; explanation: string }>;
+  expandedCount: number;
+  queueHealth: number;
+  sessionId: string;
+}
+```
 
+### Queue Health — Recommended FSRS Service Addition
+
+```typescript
+// Source: research pattern analysis of existing getDueItems() and Prisma findMany
+export async function getQueueHealth(userId: string): Promise<number> {
+  const now = new Date();
+  const twentyFourHoursLater = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+  return prisma.reviewItem.count({
+    where: {
+      userId,
+      due: {
+        gte: now,
+        lte: twentyFourHoursLater,
+      },
+    },
+  });
+}
+
+// For the existing getDueItems(), add an optional time-window parameter:
+export async function getDueItems(
+  userId: string,
+  options?: { after?: Date; before?: Date },
+) {
+  return prisma.reviewItem.findMany({
+    where: {
+      userId,
+      due: {
+        lte: options?.before ?? new Date(),
+        ...(options?.after ? { gte: options.after } : {}),
+      },
+    },
+    orderBy: { due: "asc" },
+  });
+}
+```
+
+### Expansion Metrics Count
+
+```typescript
+// Source: Prisma count query pattern (existing throughout codebase)
+const expandedCount = await prisma.reviewItem.count({
+  where: { sessionId },
+});
+```
+
+### Enhanced Summary Embed
+
+```typescript
+// Source: existing summary.ts embed pattern (summary.ts:28-44) + review.ts embed pattern (review.ts:39-46)
 const embed = new EmbedBuilder()
   .setColor(0x3498db)
   .setTitle("📊 Session Summary")
   .addFields(
-    // Existing fields — row 1 (3 inline fields)
+    // Existing fields
     { name: "Messages", value: String(summary.messageCount), inline: true },
     { name: "Corrections", value: String(summary.correctionCount), inline: true },
     { name: "Duration", value: summary.duration, inline: true },
-    // NEW: Strengths — full-width block (D-03 format)
-    {
-      name: "🏆 Strengths",
-      value: summary.strengths
-        .map((s, i) => `**${i + 1}.** ${s}`)
-        .join("\n") || "None identified",
-    },
-    // NEW: Expansion + Queue — row 2 (2 inline fields)
-    { name: "📖 New Items", value: `${summary.expansionCount} items extracted`, inline: true },
+
+    // New fields — empty line separator for visual grouping
+    { name: "\u200B", value: "\u200B", inline: false },
+
+    // Strengths (top 3)
+    { name: "🏆 Top Strengths", value: summary.strengths.map((s, i) =>
+      `**${i + 1}. ${s.term}** — ${s.explanation}`
+    ).join("\n") || "Session too short to analyze.", inline: false },
+
+    // Expansion metrics
+    { name: "📈 New Items", value: `${summary.expandedCount} extracted`, inline: true },
+
+    // Queue health
     { name: "📚 Queue", value: `${summary.queueHealth} due in 24h`, inline: true },
   )
   .setTimestamp();
 
-// Existing LLM summary text (if available)
 if (summary.summary) {
-  embed.addFields({ name: "📝 Summary", value: summary.summary });
+  embed.addFields({ name: "Summary", value: summary.summary });
 }
 ```
 
-### Queue Health Query
-
-```typescript
-// Source: CONTEXT.md D-10 — queue health within 24h window
-// [ASSUMED — standard Prisma date range query]
-
-const now = new Date();
-const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
-const queueCount = await prisma.reviewItem.count({
-  where: {
-    userId: dbSession.userId,     // The user's internal DB id
-    due: {
-      gte: now,                   // Items already due
-      lte: in24h,                 // Items due within 24 hours
-    },
-  },
-});
-
-// Display as: "📚 Queue: 5 due in 24h" (D-09)
-```
-
-### Prisma $transaction Pattern
-
-```typescript
-// Source: Prisma 6 docs — $transaction array API
-// [CITED: prisma.io/docs/orm/prisma-client/queries/transactions]
-// [VERIFIED: @prisma/client@6.19.x]
-
-// Independent operations — use array form
-// Both succeed or both fail atomically
-await prisma.$transaction([
-  prisma.session.update({
-    where: { id: sessionId },
-    data: {
-      status: "ended",
-      endedAt: new Date(),
-      messageCount: summary.messageCount,
-      correctionCount: summary.correctionCount,
-    },
-  }),
-  prisma.sessionSummary.create({
-    data: {
-      sessionId: sessionId,
-      strengths: summary.strengths,           // string[] — Prisma serializes to JSON
-      expandedCount: summary.expansionCount,
-      queueHealth: summary.queueHealth,
-      summary: summary.summary,
-    },
-  }),
-]);
-```
-
-**Important:** The array form of `$transaction` works for independent operations (no dependency on each other's results). This is correct here — the session update and summary create don't depend on each other's output (the `sessionSummary.sessionId` is already known before the transaction).
-
-## Runtime State Inventory
-
-> This phase is a feature enhancement, not a rename/refactor/migration. No runtime state changes needed.
-
-**Stored data:** No old-name references to update. New ReviewItem.sessionId field is optional — existing records remain valid with NULL. New SessionSummary model is additive.
-
-**Live service config:** No configuration changes needed. Environment variables, Discord intent settings, and BullMQ configuration remain unchanged.
-
-**OS-registered state:** No OS-level registrations affected.
-
-**Secrets and env vars:** No new secrets or env var names introduced. D-02 reuses existing `CONVERSATION_MODEL`.
-
-**Build artifacts:** `npx prisma generate` needed after schema change. No other build artifact changes.
-
-## State of the Art
-
-| Old Approach | Current Approach | When Changed | Impact |
-|--------------|------------------|--------------|--------|
-| Session data only from memory (messageCount, correctionCount in Map) | Session data also persisted to PostgreSQL | Phase 2 | Phase 5 extends this pattern — SessionSummary persists post-session data that doesn't exist in-memory |
-| `/summary` shows basic stats only | Enhanced summary with LLM strengths, expansion, queue | Phase 5 | Adds three data dimensions without breaking existing behavior |
-| Extraction creates items without session tracking | Items tagged with sessionId (optional FK) | Phase 5 | Enables session-attributed expansion metrics. Existing items remain valid (NULL sessionId) |
-| Session ends with single DB update | Session ends with atomic DB update + SessionSummary create | Phase 5 | Adds durability to session summary data |
-
-## Assumptions Log
-
-| # | Claim | Section | Risk if Wrong |
-|---|-------|---------|---------------|
-| A1 | Prisma `$transaction` array form works for independent session.update + sessionSummary.create | Pattern 5 | LOW — Prisma 6 transaction docs confirm array form supports independent operations |
-| A2 | The strength analysis call to gpt-4o-mini completes within 10s | Pitfall 1 | MEDIUM — If model is slow, user waits. Mitigation: timeout + graceful fallback. gpt-4o-mini is generally fast. |
-| A3 | Discord embed field value limit is 1024 characters | Pitfall 4 | HIGH — If limit differs, embed builder throws. Confirmed in web search: Discord caps field values at 1024 characters. |
-| A4 | The extraction job payload already contains sessionId (verified: yes, in `ExtractionJobPayloadSchema`) | Pattern 3 | LOW — Already confirmed in codebase at `src/types/extraction.ts` line 5 |
-| A5 | `createItem()` can accept an optional sessionId parameter without breaking existing callers | Pattern 2 | LOW — Adding optional param to TypeScript function is backward-compatible |
-| A6 | `prisma.reviewItem.count({ where: { sessionId } })` works without creating a relation in the schema | Pattern 4 | LOW — Must add `sessionId String?` and `session Session? @relation()` to ReviewItem model, plus index |
-| A7 | SessionSummary strengths JSON field can store a string[] directly | D-12 | MEDIUM — Prisma's Json type accepts any serializable value. string[] is valid JSON. Should work. |
-
-## Open Questions
-
-1. **Should `endSession()` be refactored into two functions or accept a parameter?**
-   - What we know: Both `/summary` and `/end` call `endSession()`.
-   - What's unclear: `/summary` needs SessionSummary creation; `/end` does not.
-   - Recommendation: **Separate function** `endSessionWithSummary(summaryData)` for `/summary`. Leave existing `endSession()` unchanged for `/end`. Cleaner than adding conditional params.
-
-2. **How should the active session Map cleanup work with the new transaction?**
-   - What we know: DB writes go in `$transaction`. In-memory cleanup (Map delete, thread archive) happens separately.
-   - What's unclear: Should the in-memory cleanup happen before or after the transaction?
-   - Recommendation: **After the transaction.** If the transaction fails, the session should still be in the in-memory Map so the user can retry. If in-memory cleanup happens before the transaction and the transaction fails, the session is lost in memory but active in DB.
-
-3. **Should queue health use a new `getQueueHealth()` function or inline query?**
-   - What we know: D-10 leaves this at agent's discretion.
-   - Recommendation: **Inline query** in the enhanced `getSessionSummary()`. It's a single `prisma.reviewItem.count()` call — no abstraction needed. Adding a function to fsrs.ts would be over-engineering for a simple count query.
-
 ## Validation Architecture
 
-> `workflow.nyquist_validation` is enabled. See `.planning/config.json`.
-
 ### Test Framework
-
 | Property | Value |
 |----------|-------|
 | Framework | vitest ^4.1.10 |
-| Config file | Inherits from vitest config (likely `vitest.config.ts` or inline in package.json) |
-| Quick run command | `npx vitest run --reporter=verbose` |
-| Full suite command | `npx vitest run` |
+| Config file | `vitest.config.ts` |
+| Quick run command | `npx vitest run --reporter=verbose src/__tests__/commands/summary.test.ts` |
+| Full suite command | `npm test` |
 
 ### Phase Requirements → Test Map
-
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
-| SUMM-01 | /summary terminates session + aggregates data | Integration (mocked) | `npx vitest run src/__tests__/commands/summary.test.ts` | ❌ Wave 0 |
-| SUMM-02 | Embed displays top 3 strengths | Integration (mocked LLM) | `npx vitest run src/__tests__/commands/summary.test.ts` | ❌ Wave 0 |
-| SUMM-03 | Expansion metrics = count ReviewItems by sessionId | Unit (service) | `npx vitest run src/__tests__/conversation.test.ts` | ❌ Wave 0 |
-| SUMM-04 | Queue health = items due within 24h | Unit (service) | `npx vitest run src/__tests__/conversation.test.ts` | ❌ Wave 0 |
-| SUMM-05 | SessionSummary persists to PostgreSQL | Integration (mocked Prisma) | `npx vitest run src/__tests__/commands/summary.test.ts` | ❌ Wave 0 |
-| D-07 | Extraction sets sessionId at creation only | Unit (extraction service) | `npx vitest run src/__tests__/extraction.test.ts` | ❌ Wave 0 |
+| SUMM-01 | /summary terminates session | integration | `npx vitest run src/__tests__/commands/summary.test.ts -t "terminates" -x` | ❌ Wave 0 |
+| SUMM-02 | Embed shows top 3 strengths | integration | `npx vitest run src/__tests__/commands/summary.test.ts -t "strengths" -x` | ❌ Wave 0 |
+| SUMM-03 | Embed shows expansion count | integration | `npx vitest run src/__tests__/commands/summary.test.ts -t "expansion" -x` | ❌ Wave 0 |
+| SUMM-04 | Embed shows queue health | integration | `npx vitest run src/__tests__/commands/summary.test.ts -t "queue" -x` | ❌ Wave 0 |
+| SUMM-05 | Summary persists to PostgreSQL | integration | `npx vitest run src/__tests__/commands/summary.test.ts -t "persists" -x` | ❌ Wave 0 |
+| — | SessionSummary model 1:1 relation | unit | `npx vitest run src/__tests__/services/summary-service.test.ts -x` | ❌ Wave 0 |
+| — | Queue health 24h window query | unit | `npx vitest run src/__tests__/services/summary-service.test.ts -t "queue" -x` | ❌ Wave 0 |
 
 ### Sampling Rate
-
-- **Per task commit:** `npx vitest run --reporter=verbose src/__tests__/commands/summary.test.ts src/__tests__/conversation.test.ts`
-- **Per wave merge:** `npx vitest run`
+- **Per task commit:** `npx vitest run src/__tests__/commands/summary.test.ts --reporter=verbose`
+- **Per wave merge:** `npm test`
 - **Phase gate:** Full suite green before `/gsd-verify-work`
 
 ### Wave 0 Gaps
-
-- [ ] `src/__tests__/commands/summary.test.ts` — covers SUMM-01, SUMM-02, SUMM-05 (new test file)
-- [ ] Extend `src/__tests__/conversation.test.ts` — covers SUMM-03, SUMM-04 (enhanced getSessionSummary)
-- [ ] Extend `src/__tests__/extraction.test.ts` — covers D-07 (sessionId pass-through)
-- [ ] Mock strength analysis LLM in summary tests (mock OpenAI response with 3 fake strengths)
+- [ ] `src/__tests__/commands/summary.test.ts` — covers SUMM-01 through SUMM-05
+- [ ] `src/__tests__/services/summary-service.test.ts` — covers SessionSummary creation, queue health query, expansion count query
+- [ ] Existing `src/__tests__/setup.ts` — verify mockPrisma already has `reviewItem.count` mock and `sessionSummary` methods (probably needs update to add count and sessionSummary mocks)
 
 ## Security Domain
-
-> `security_enforcement: true` in config.json. `asvs_level: 1`.
 
 ### Applicable ASVS Categories
 
 | ASVS Category | Applies | Standard Control |
 |---------------|---------|-----------------|
-| V2 Authentication | No | Discord OAuth handles identity |
-| V3 Session Management | Yes | Session state in Prisma + Map — no session tokens exposed |
-| V4 Access Control | No | Single-user per session — no RBAC needed |
-| V5 Input Validation | Yes | Zod schemas for extraction job payloads. LLM output parsed from `chat.completions.create()`, not from user input directly. |
-| V6 Cryptography | No | No secrets stored at rest (SessionSummary is user-facing data) |
+| V2 Authentication | no | Discord OAuth handles auth — no password store |
+| V3 Session Management | no | Sessions are per-user Discord threads, no cookie/token |
+| V4 Access Control | no | Single-user bot, no role-based access |
+| V5 Input Validation | yes | Zod schema for extraction payload. LLM strength output parsed with try/catch + fallback |
+| V6 Cryptography | no | No encryption needed. Data stored in PostgreSQL without PII beyond Discord user IDs |
 
-### Known Threat Patterns for {discord.js + Prisma}
+### Known Threat Patterns for Express+Discord.js Stack
 
 | Pattern | STRIDE | Standard Mitigation |
 |---------|--------|---------------------|
-| LLM hallucination in strength analysis | Tampering (of perceived data) | Strengths are displayed as LLM-generated suggestions — no automated action is taken based on them. User reads and ignores if inaccurate. |
-| Unauthorized session summary access | Information Disclosure | Conversation summary command checks `activeSessions` Map by `userId` from interaction. Session data is per-user — no cross-user access possible via Discord interaction pattern. |
-| Prisma transaction rollback leaving inconsistent state | Denial of Service | If transaction fails after in-memory cleanup (Map delete + thread archive), the session is "lost" in-memory but remains active in DB. Mitigation: clean up in-memory AFTER the transaction commits, not before. |
+| LLM prompt injection via message content | Tampering | System prompt explicitly constrains extraction output to `detectedItems[]`. Strength analysis runs on conversation messages already in DB — same content the conversation model already processed |
+| Race condition on session end | Denial of Service | Use `where: { id, status: "active" }` on session update. Unique constraint on SessionSummary.sessionId prevents duplicates |
+| Unparseable LLM JSON output | — | Always use `response_format` parameter + try/catch with fallback display text |
+
+## Implementation Guidance
+
+### Proposed Implementation Order
+
+1. **Prisma schema changes** (migration first):
+   - Add optional `sessionId` (String?) to ReviewItem model with FK → Session
+   - Create SessionSummary model with 1:1 relation to Session
+   - Run `prisma migrate dev --name session_summary`
+
+2. **FSRS service changes:**
+   - Add optional `sessionId` to `CreateItemInput` and pass through to `createItem()`
+   - Add `getQueueHealth(userId)` function
+
+3. **Extraction worker change:**
+   - Pass `data.sessionId` to `createItem()` call in `processExtractionJob()`
+
+4. **Conversation service changes:**
+   - Extend `getSessionSummary()` return type with new fields
+   - Add strength analysis LLM call
+   - Add expansion count query
+   - Add queue health query
+   - Enhance `endSession()` to create SessionSummary in `$transaction`
+
+5. **Summary command change:**
+   - Enhance embed with new fields in the order: Messages, Corrections, Duration, (separator), Strengths, New Items, Queue Health, (separator), Summary text
+
+6. **Test changes:**
+   - Update test setup to include `reviewItem.count` mock and `sessionSummary` mock
+   - Add summary command tests
+   - Add summary service tests
+
+### Key Files Modified
+| File | Change Type | What Changes |
+|------|-------------|-------------|
+| `prisma/schema.prisma` | Add fields + model | Add `sessionId` to ReviewItem. Add `SessionSummary` model |
+| `src/services/fsrs.ts` | Extend API | Add `sessionId` to `CreateItemInput`, add `getQueueHealth()` |
+| `src/services/conversation.ts` | Enhance functions | Extend `getSessionSummary()` return, add strength LLM call, add `$transaction` to `endSession()` |
+| `src/services/extraction.ts` | Pass-through | Pass `data.sessionId` to `createItem()` |
+| `src/commands/summary.ts` | Enhance embed | Add new fields to embed |
+
+### What NOT to Change
+- **Do NOT** modify `src/lib/config.ts` — no new env vars needed
+- **Do NOT** modify `src/lib/prisma.ts` — singleton pattern unchanged
+- **Do NOT** modify `src/types/extraction.ts` — `sessionId` already in payload
+- **Do NOT** modify `src/types/session.ts` — ActiveSession interface stays the same
+- **Do NOT** modify `src/lib/queue.ts` — extraction queue unchanged
+- **Do NOT** modify `src/events/messageCreate.ts` — extraction enqueue unchanged
+
+## Potential Risks and Mitigations
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| LLM strength analysis timeout during /summary | Low | Medium — user sees incomplete embed | Set timeout on OpenAI call (15s as in extraction.ts). Fallback: show "Strengths analysis unavailable" |
+| SessionSummary creation fails after session update | Low | High — ended session without summary | Use `$transaction` for atomicity. Update session status AFTER the transaction inside the same transaction |
+| Extraction job arrives after session ended | Low | Low — sessionId no longer matches active session | sessionId is just a FK reference. Still valid as a data point even if the session is ended. No integrity issue |
+| CONVERSATION_MODEL mismatch (gpt-4o vs gpt-4o-mini) | Medium | Medium — higher costs if gpt-4o used by default | Hardcode model for strength analysis or set CONVERSATION_MODEL=gpt-4o-mini in env. Flag to user |
+| Multiple ReviewItems with same sessionId from concurrent sessions | Low | Low — concurrent sessions per user not supported (single ActiveSession per user in the Map) | Architecture prevents this: only one active session per user |
+
+## Assumptions Log
+
+| # | Claim | Section | Risk if Wrong |
+|---|-------|---------|---------------|
+| A1 | Extraction job payload `sessionId` is the correct UUID and matches Session.id at enqueue time | ReviewItem.sessionId Integration | Already verified: `src/events/messageCreate.ts` passes `session.id` from the ActiveSession map, which is the same UUID created in `createSession()`. LOW risk. |
+| A2 | The `CONVERSATION_MODEL` env var defaults to `gpt-4o` in config.ts, but D-02 treats it as `gpt-4o-mini` | LLM Strength Analysis | MEDIUM risk — if the env var is not explicitly set, strength analysis uses `gpt-4o` instead of `gpt-4o-mini`. Mitigation: hardcode model or update `.env.example`. Flag to user in discuss-phase. |
+| A3 | Prisma `$transaction` with array of promises works with Prisma 6.x | SessionSummary Model | Already verified [CITED: Prisma docs — `$transaction` accepts array of Prisma promises]. LOW risk. |
+
+## Open Questions (RESOLVED)
+
+1. **Strength analysis prompt location** — RESOLVED: Create `prompts/conversation/strengths.md` as a template file. Follows the established pattern from summarizer.ts.
+   - What we know: Existing prompts live in `prompts/conversation/` (summarize.md exists). The strength analysis prompt should follow the same pattern.
+   - What's unclear: Whether to create `prompts/conversation/strengths.md` or inline the prompt in conversation.ts (like the greeting prompt).
+   - **Recommendation:** Create `prompts/conversation/strengths.md` as a template file. Follows the established pattern from summarizer.ts.
+
+2. **CONVERSATION_MODEL vs hardcoded gpt-4o-mini** — RESOLVED: Hardcode "gpt-4o-mini" for strength analysis (following summarizer.ts pattern). Flag model config inconsistency to user.
+   - What we know: D-02 says use CONVERSATION_MODEL (gpt-4o-mini). Config defaults CONVERSATION_MODEL to "gpt-4o". summarizer.ts hardcodes "gpt-4o-mini".
+   - What's unclear: Which resolution to follow.
+   - **Recommendation:** Follow summarizer.ts pattern — hardcode "gpt-4o-mini" for the strength analysis if the concern is cost. Or add an explicit `STRENGTHS_MODEL` env var. Present this choice to the planner.
+
+3. **SessionSummary.summary field — carry forward or regenerate?** — RESOLVED: Carry forward existing `dbSession.summary` — zero additional LLM cost.
+   - What we know: D-12 says "carry forward existing LLM summary." Session model already has a `summary` field populated by the summarizer.
+   - What's unclear: Whether to store the Session's existing summary text or run a new LLM call for a comprehensive summary.
+   - **Recommendation:** Carry forward `dbSession.summary` — it's already stored and cost-free. No additional LLM call needed.
+
+4. **Test mock for `reviewItem.count` and `sessionSummary`** — RESOLVED: Add `count: vi.fn().mockResolvedValue(0)` to `reviewItem` mock, add `sessionSummary` block with create/findUnique/findMany, add `$transaction` mock.
+   - What we know: `src/__tests__/setup.ts` has a `mockPrisma` with `reviewItem` methods (create, findUnique, findFirst, findMany, update) but NOT `count`. No `sessionSummary` mock exists.
+   - What's unclear: Whether to add `count` to existing reviewItem mock or import the type as done.
+   - **Recommendation:** Add `count: vi.fn().mockResolvedValue(0)` to the `reviewItem` mock in `setup.ts`. Add a `sessionSummary` block with `create`, `findUnique`, `findMany` methods.
+
+## Environment Availability
+
+| Dependency | Required By | Available | Version | Fallback |
+|------------|------------|-----------|---------|----------|
+| Node.js | Runtime | ✓ | 26.0.0 | — |
+| npm | Package mgmt | ✓ | 11.12.1 | — |
+| Docker | Containerization | ✓ (assumed) | — | — |
+| PostgreSQL | Database | — (container) | — | Part of Docker Compose |
+| Redis | Queue backend | — (container) | — | Part of Docker Compose |
+
+**Missing dependencies with no fallback:** None — all dependencies are managed via Docker Compose.
+
+**Missing dependencies with fallback:** None needed — runtime tools verified.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Codebase analysis: `src/commands/summary.ts` — existing /summary command structure
-- Codebase analysis: `src/services/conversation.ts` — getSessionSummary() and endSession() signatures
-- Codebase analysis: `src/services/extraction.ts` — processExtractionJob() with sessionId in payload
-- Codebase analysis: `src/services/fsrs.ts` — createItem(), getDueItems() signatures
-- Codebase analysis: `prisma/schema.prisma` — existing model definitions
-- Codebase analysis: `src/types/extraction.ts` — ExtractionJobPayload includes sessionId
-- Codebase analysis: `src/events/messageCreate.ts` — extraction enqueue passes sessionId
-- Codebase analysis: `src/prompts/conversation/system.md` and `extraction/system.md` — prompt patterns
+- Phase 5 CONTEXT.md — locked decisions D-01 through D-13
+- Phase 4 CONTEXT.md — extraction pipeline design, job payload with sessionId
+- Phase 3 CONTEXT.md — FSRS service API (createItem, getDueItems)
+- Phase 2 CONTEXT.md — Session model, embed patterns, conversation patterns
+- `prisma/schema.prisma` — Current schema verified
+- `src/services/fsrs.ts` — createItem(), getDueItems() implementations verified
+- `src/services/extraction.ts` — processExtractionJob() verified (missing sessionId pass-through)
+- `src/services/conversation.ts` — getSessionSummary(), endSession() verified
+- `src/services/summarizer.ts` — LLM prompt + call pattern for strength analysis
+- `src/commands/summary.ts` — Embed pattern verified
+- `src/commands/review.ts` — Embed pattern, button flow verified
+- `src/events/messageCreate.ts` — enqueueExtraction() verified (sessionId present in payload)
+- `src/types/extraction.ts` — ExtractionJobPayload schema verified (sessionId field present)
+- `src/lib/config.ts` — CONVERSATION_MODEL default verified ("gpt-4o")
+- `src/__tests__/setup.ts` — Mock structure verified
+- `vitest.config.ts` — Test config verified
 
 ### Secondary (MEDIUM confidence)
-- [CITED: discordjs.guide/popular-topics/embeds] — embed field limits (name 256, value 1024, 25 fields max)
-- [CITED: prisma.io/docs/orm/prisma-client/queries/transactions] — $transaction patterns
-- [CITED: stackoverflow + Discord API docs] — inline field limit is 3 per row on desktop
+- D-02 model designation (calls gpt-4o-mini "CONVERSATION_MODEL" but config defaults to gpt-4o) — flagged as inconsistency
+- SessionSummary model field naming — follow existing Prisma conventions (camelCase)
+
+### Tertiary (LOW confidence)
+- None — all claims either verified from source code or flagged as `[ASSUMED]` in the Assumptions Log.
 
 ## Metadata
 
 **Confidence breakdown:**
-- Standard stack: HIGH — no new packages, all existing verified dependencies
-- Architecture: HIGH — all patterns derived from existing codebase analysis
-- Pitfalls: MEDIUM — most derived from codebase patterns, some from general Prisma/LLM knowledge
+- Standard stack: HIGH — no new packages, all verified from existing code
+- Architecture: HIGH — patterns validated against existing code (conversation.ts, summarizer.ts, extraction.ts, fsrs.ts)
+- Pitfalls: HIGH — derived from actual code analysis and known Prisma/discord.js patterns
+- Environment: MEDIUM — Docker/Docker Compose assumed present but not verified in this session
 
 **Research date:** 2026-07-21
-**Valid until:** 2026-08-21 (30 days — stable stack, no fast-moving dependencies in this phase)
+**Valid until:** 2026-08-21 (stable stack — no dependency changes expected)
