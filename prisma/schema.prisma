@@ -32,6 +32,8 @@ model Session {
   endedAt         DateTime?
   updatedAt       DateTime  @updatedAt
   messages        Message[]
+  sessionSummary  SessionSummary?
+  reviewItems     ReviewItem[]
 
   @@index([userId])
   @@index([status])
@@ -57,6 +59,8 @@ model ReviewItem {
   source        String
   type          String   // "vocabulary" | "grammar"
   language      String
+  sessionId     String?
+  session       Session?  @relation(fields: [sessionId], references: [id])
   stability     Float
   difficulty    Float
   state         Int      @default(0)  // 0=New, 1=Learning, 2=Review, 3=Relearning
@@ -71,4 +75,19 @@ model ReviewItem {
   @@index([userId])
   @@index([userId, due])
   @@index([userId, type])
+  @@index([sessionId])
+}
+
+model SessionSummary {
+  id            String   @id @default(uuid())
+  sessionId     String   @unique
+  session       Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  strengths     Json?
+  expandedCount Int
+  queueHealth   Int
+  summary       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([sessionId])
 }
