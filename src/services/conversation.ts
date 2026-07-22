@@ -256,9 +256,16 @@ export async function analyzeStrengths(
       completion.choices[0]?.message?.content ?? "[]",
     );
 
-    // Validate shape: should be an array of { term, explanation } objects
     if (Array.isArray(parsed)) {
       return parsed.slice(0, 3);
+    }
+
+    // Handle json_object response format wrapping the array in an object (e.g. {"strengths": [...]})
+    if (typeof parsed === "object" && parsed !== null) {
+      const arrayProp = Object.values(parsed).find(Array.isArray);
+      if (arrayProp) {
+        return arrayProp.slice(0, 3);
+      }
     }
 
     return [];
