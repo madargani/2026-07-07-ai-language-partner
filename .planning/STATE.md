@@ -1,95 +1,82 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: milestone
-current_phase: 04
-current_phase_name: extraction-review
-status: "Phase 04 shipped — PR #1"
-stopped_at: Phase 5 context gathered
-last_updated: "2026-07-21T08:25:04.423Z"
+milestone_name: mvp
+current_phase: 05
+status: shipped
+stopped_at: Milestone v1.0 complete — all 5 phases shipped
+last_updated: "2026-07-21T10:00:00.000Z"
 last_activity: 2026-07-21
-last_activity_desc: Phase 05 planning complete
+last_activity_desc: Milestone v1.0 archived and tagged
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 6
-  completed_plans: 6
-  percent: 80
+  completed_phases: 5
+  total_plans: 8
+  completed_plans: 8
+  percent: 100
+current_phase_name: complete
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-07)
+See: .planning/PROJECT.md (updated 2026-07-21 after v1.0 milestone)
 
 **Core value:** Users can practice a language through natural conversation, with corrections and spaced repetition working in the background to optimize retention — without breaking conversational flow.
-**Current focus:** Phase 05 — session-summary
+
+**Current focus:** Planning next milestone — run `/gsd-new-milestone`
 
 ## Current Position
 
-Phase: 04 (extraction-review) — COMPLETE
-Plan: 2 of 2 — Complete
-Status: Phase 04 shipped — PR #1
-Last activity: 2026-07-21 — Phase 05 planning complete
+**Milestone v1.0: MVP** — ✅ SHIPPED 2026-07-21
+**Phases:** 5 of 5 — Complete
+**Plans:** 8 of 8 — Complete
+**Requirements:** 38 of 38 — Satisfied
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Next Steps
 
-Phase 5 follows: Session Summary — post-session insights, top strengths, expansion metrics, and queue health display.
+All 5 phases complete and shipped! Milestone v1.0 is archived:
+- `.planning/milestones/v1.0-ROADMAP.md`
+- `.planning/milestones/v1.0-REQUIREMENTS.md`
 
-## Performance Metrics
+Run `/gsd-new-milestone` to define and start the next milestone.
 
-**Velocity:**
+## Milestone Stats
 
-- Total plans completed: 1
-- Average duration: 65 min (plan 01-01)
-- Total execution time: 65 min
+- **Phases:** 5 (Foundation, Conversation, FSRS, Extraction/Review, Session Summary)
+- **Plans:** 8
+- **Tasks:** ~25
+- **TypeScript:** 35 files, ~3,800 lines
+- **Tests:** 62 passing (9 test files)
+- **Duration:** 14 days (2026-07-07 → 2026-07-21)
+- **Commits:** 73
+- **Tag:** v1.0
 
-**By Phase:**
+## Deferred Items
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 1 | 1 | 65 min | 65 min |
+Items acknowledged and deferred at milestone close on 2026-07-21:
 
-**Recent Trend:**
-
-- Last 5 plans: —
-- Trend: —
-
-*Updated after each plan completion*
-| 01-foundation-setup P01 | 65min | - tasks | - files |
-| Phase 03 P01 | 8min | 2 tasks | 6 files |
+| Category | Item | Status |
+|----------|------|--------|
+| tech_debt | Duplicate rehydrateSessions() call on startup | deferred |
+| tech_debt | Extraction DLQ has no consumer | deferred |
+| tech_debt | Phase 5 missing VERIFICATION.md (UAT exists) | deferred |
+| tech_debt | Phase 4 SUMMARY files missing YAML frontmatter | deferred |
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
--
-
-- [Phase 03]: Use Grade type from ts-fsrs for scheduler.next() cast, not Rating (which includes Manual=0) — TypeScript compilation fix — ts-fsrs v5.4.1 expects Grade type (1|2|3|4) not Rating (0|1|2|3|4) for scheduler.next()
+All milestone decisions logged in PROJECT.md Key Decisions table (12 entries).
 
 ### Pending Todos
 
-None yet.
+None — milestone completed.
 
 ### Blockers/Concerns
 
-None yet.
-
-## Deferred Items
-
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| *(none)* | | | |
-
-## Session Continuity
-
-Last session: 2026-07-20T19:59:38.975Z
-Stopped at: Phase 5 context gathered
-Resume file: 
-.planning/phases/05-session-summary/05-CONTEXT.md
+- 4 tech debt items deferred (see Deferred Items table)
+- Extraction DLQ monitoring may need attention before production deployment
