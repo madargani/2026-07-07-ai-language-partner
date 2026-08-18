@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "read": {
+      "/home/madargani/Work/tries/2026-07-07-ai-language-partner/.opencode/gsd-core/*": "allow"
+    },
+    "external_directory": {
+      "/home/madargani/Work/tries/2026-07-07-ai-language-partner/.opencode/gsd-core/*": "allow"
+    }
+  }
+}
